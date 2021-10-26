@@ -52,3 +52,42 @@ kubectl apply -f pod.yaml
 
 `kubectl edit pods redis` Edit the pods with vim and will exit and apply changes automatically. Alternatively, update the yaml file and apply again.
 
+# ReplicaSet
+
+Newer version of Replication Controller. Here we see its used to monitor and maintain 3 running instances of a defined pod. The selector 
+
+```yaml
+# replicaset-defn.yaml
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: myapp-replicaset
+  labels:
+    app: myapp
+    type: front-end
+spec:
+  template:
+    # This section contains the pod definition
+    metadata:
+      name: myapp-pod
+      labels:
+         app: myapp-pod
+         type: front-end
+    spec:
+      containers:
+      - name: nginx-container
+        image: nginx
+  replicas: 3 # How many pods to maintain
+  selector:
+    matchLabels:
+      type: front-end
+```
+
+Create the replicaset with `kubectl create -f replicaset-defn.yaml`
+
+List the replica sets with `kubectl get replicaset`
+
+To change the number of replicas, edit the file and `kubectl replace -f replicaset-defn.yaml`
+
+Deletes the ReplicaSet and underlying pods with `kubectl delete replicaset myapp-replicaset` - 
+
