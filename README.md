@@ -52,7 +52,31 @@ kubectl apply -f pod.yaml
 
 `kubectl edit pods redis` Edit the pods with vim and will exit and apply changes automatically. Alternatively, update the yaml file and apply again.
 
-# ReplicaSet
+Can also use to edit other resources like `kubectl edit replicaset replica-set-1`
+
+# kubectl other commands
+
+These commands can be generalised for other resources as well.
+
+`kubectl explain pods` - Explains the structure of pod definition files, can also use other Kube resources such as replicasets, check with `kubectl api-resouces` to see what you can query
+
+`kubectl get replicaset replicaset-1 -o yaml` Displays the YAML config for running k8s resource
+
+`kubectl scale replicaset --replicas=5 replicaset-1` Scales the replicaset to 5
+
+`kubectl get all` List all the resources which are provisioned.
+
+`kubectl api-resources -o wide` Lists all the resources you can create with each apiversion. [[Ref](https://stackoverflow.com/a/55358685/7908040)]
+
+
+
+## Imperative vs Declarative
+
+`kubectl create` is imperative, will specify what resources to create while `kubectl apply` is declarative and just states the desired end-state config.
+
+# k8s resources
+
+## ReplicaSet
 
 Newer version of Replication Controller. Here we see its used to monitor and maintain 3 running instances of a defined pod. The selector 
 
@@ -89,5 +113,5 @@ List the replica sets with `kubectl get replicaset`
 
 To change the number of replicas, edit the file and `kubectl replace -f replicaset-defn.yaml`
 
-Deletes the ReplicaSet and underlying pods with `kubectl delete replicaset myapp-replicaset` - 
+Delete multiple ReplicaSets and underlying pods with `kubectl delete replicaset myapp-replicaset-1 replicaset-2` - 
 
