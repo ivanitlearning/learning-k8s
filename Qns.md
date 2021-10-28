@@ -1,6 +1,10 @@
 # Qns
 
+Some questions that arise while going through KodeKloud's course. To be updated periodically. These arise mostly from stream of consciousness musing, so don't expect it to be properly structured.
+
 1. Difference between ReplicaSet and Deployment?
+
+   * Deployment appears to support rollback eg. Change nginx version back to older one.
 
 2. There seems to be no way to list the pods of a specific named deployment, is there? Only [by labels](https://stackoverflow.com/questions/52957227/kubectl-command-to-list-pods-of-a-deployment-in-kubernetes/52957569)?
 
@@ -21,5 +25,8 @@
    deployment-1-8598555cd4-nhw4r   1/1     Running   0          12m
    ```
 
-   
+3. How does NodePort work for loadbalancing among multiple pods with same selector in a node?
 
+4. In case you face problems trying to use the X11 display after switching to root with MobaXterm, [read this](https://blog.mobatek.net/post/how-to-keep-X11-display-after-su-or-sudo/)
+
+5. Do `minikube start` when you start up the instance

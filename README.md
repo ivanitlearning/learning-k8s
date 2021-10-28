@@ -1,7 +1,7 @@
 # Learning k8s
 Notes on learning Kubernetes, starting with CKA. Based on KodeKloud's course.
 
-# k8s Architecture
+# k8s architecture
 
 Master node
 
@@ -60,15 +60,15 @@ These commands can be generalised for other resources as well.
 
 `kubectl explain pods` - Explains the structure of pod definition files, can also use other Kube resources such as replicasets, check with `kubectl api-resouces` to see what you can query
 
-`kubectl get replicaset replicaset-1 -o yaml` Displays the YAML config for running k8s resource
-
-`kubectl scale replicaset --replicas=5 replicaset-1` Scales the replicaset to 5
+`kubectl <command> --record` Makes command appear in history?
 
 `kubectl get all` List all the resources which are provisioned.
 
 `kubectl api-resources -o wide` Lists all the resources you can create with each apiversion. [[Ref](https://stackoverflow.com/a/55358685/7908040)]
 
+`kubectl logs worker-app-pod` Display error logs for problematic pod **worker-app-pod**
 
+`kubectl delete replicasets,services,deployments,pods --all` - Deletes all of these in the current namespace.
 
 ## Imperative vs Declarative
 
@@ -109,9 +109,65 @@ spec:
 
 Create the replicaset with `kubectl create -f replicaset-defn.yaml`
 
+Displays the YAML config for running k8s resource `kubectl get replicaset replicaset-1 -o yaml` 
+
+Scales the replicaset to 5 `kubectl scale replicaset --replicas=5 replicaset-1`
+
 List the replica sets with `kubectl get replicaset`
 
 To change the number of replicas, edit the file and `kubectl replace -f replicaset-defn.yaml`
 
-Delete multiple ReplicaSets and underlying pods with `kubectl delete replicaset myapp-replicaset-1 replicaset-2` - 
+Delete multiple ReplicaSets and underlying pods with `kubectl delete replicaset myapp-replicaset-1 replicaset-2` 
+
+## Deployments
+
+* Similar to ReplicaSet, but allows for rollback.
+
+* Updates pods either via Recreate or Rolling update (default)
+
+Rollback with `kubectl rollout undo deployment/myapp-deployment`
+
+Update without modifying YAML with `kubectl set image deployment/myapp-deployment nginx=nginx:1.9.1`
+
+Check status and history of deployment
+
+```text
+kubectl rollout status deployment/myapp-deployment
+kubectl rollout history deployment/myapp-deployment
+```
+
+## Services
+
+### NodePort
+
+* NodePort service maps a port on the node to a port on the pod in the node.
+* NodePort itself is the port exposed on the node after the mapping is done. Ranges 30,000 - 32767
+
+#### NodePort definition
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+spec:
+  type: NodePort
+  selector:
+    app: MyApp
+  ports:
+      # By default and for convenience, the `targetPort` is set to the same value as the `port` field.
+    - port: 80
+      targetPort: 80
+      # Optional field
+      # By default and for convenience, the Kubernetes control plane will allocate a port from a range (default: 30000-32767)
+      nodePort: 30008
+```
+
+In this definition 30008 is exposed on the node which directs to the service's port 80 which in turn connects to the pod's 80.
+
+## ClusterIP
+
+## LoadBalancer
+
+## kubectl service commands
 
