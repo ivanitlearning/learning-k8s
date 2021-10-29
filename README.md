@@ -119,6 +119,8 @@ To change the number of replicas, edit the file and `kubectl replace -f replicas
 
 Delete multiple ReplicaSets and underlying pods with `kubectl delete replicaset myapp-replicaset-1 replicaset-2` 
 
+* **selector** is optional field for ReplicationController but not for ReplicaSet. When omitted, k8s assumes the selector to be same as the template specified in the template field.
+
 ## Deployments
 
 * Similar to ReplicaSet, but allows for rollback.
