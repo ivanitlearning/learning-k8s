@@ -30,3 +30,5 @@ Some questions that arise while going through KodeKloud's course. To be updated 
 4. In case you face problems trying to use the X11 display after switching to root with MobaXterm, [read this](https://blog.mobatek.net/post/how-to-keep-X11-display-after-su-or-sudo/)
 
 5. Do `minikube start` when you start up the instance
+
+6. How exactly do you use DS for monitoring software?
