@@ -81,6 +81,16 @@ Or create the yaml file from image `kubectl create deployment --image=nginx ngin
 
 Display all the labels with `kubectl get all --show-labels`
 
+Set environment variable **KUBE_EDITOR** to specify editor when calling `kubectl edit` eg. `export KUBE_EDITOR=vim`
+
+Start the nginx container using the default command, but use custom arguments (arg1 .. argN) for that command.
+
+`kubectl run nginx --image=nginx -- <arg1> <arg2> ... <argN>`
+
+Start the nginx container using a different command and custom arguments.
+
+`kubectl run nginx --image=nginx --command -- <cmd> <arg1> ... <argN>`
+
 ## 1.7 k8s resources
 
 ## 1.8 ReplicaSet
@@ -546,13 +556,340 @@ Limitations
 
 ## 2.9  Static Pods
 
-* Nodes that exist without a master node, api-server or any controllers
+* Nodes that exist without a master node, api-server or any controllers.
 * Nodes that have kubelet only.
 * kubelet checks **/etc/kubernetes/manifests** occasionally for pod yaml definition files and creates them
 * Will check files for changes and recreates pods for changes to take effect
 * Limited to pods only, not any other resource
-* Path can be configured with argument when starting kubelet
+* Path can be configured with argument when starting kubelet (check with `ps aux | grep kubelet`)
   * **--pod-manifest-path=/path/to/defn/files**
   * **--config=kubeconfig.yaml**
     * kubeconfig.yaml contains line `staticPodPath: /etc/kubernetes/manifest`
 * Once created, view pods with `docker ps` command
+* Pods created by kubelet will also appear with `kubectl get pods`
+
+### 2.9.1 Use cases
+
+* Used for deploying control-plane components as static pods on master nodes with kubelet only. Put these files in the pod definition folders.
+  * controller-manager.yaml
+  * apiserver.yaml
+  * etcd.yaml
+
+* kubeadm uses this to set up a k8s cluster
+
+### 2.9.2 Tips and commands
+
+* Identify static pods by identifying which pods have $nodename as part of their names [[ref](https://stackoverflow.com/questions/65657808/how-to-identify-static-pods-via-kubectl-command#comment116095266_65658362)]
+
+	```text
+	root@controlplane:~# kubectl get nodes
+	NAME           STATUS   ROLES                  AGE     VERSION
+	controlplane   Ready    control-plane,master   4m1s    v1.20.0
+	node01         Ready    <none>                 2m56s   v1.20.0
+	root@controlplane:~# kubectl get pods -A | grep -i controlplane
+	kube-system   etcd-controlplane                      1/1     Running   0          8m34s
+	kube-system   kube-apiserver-controlplane            1/1     Running   0          8m34s
+	kube-system   kube-controller-manager-controlplane   1/1     Running   0          8m34s
+	kube-system   kube-scheduler-controlplane            1/1     Running   0          8m34s
+	```
+
+## 2.10 Multiple Schedulers
+
+* Allows your own custom scheduler for pods
+* Your custom scheduler can be used for certain apps, while the rest goes through default
+* Scheduler itself is a pod
+
+### 2.10.1 Custom scheduler
+
+* Get scheduler binary from https://storage.googleapis.com/kubernetes-release/release/v1.12.0/bin/linux/amd64/kube-scheduler
+
+* Created with a pod definition file with `kubectl create -f custom-scheduler.conf`
+
+* Default k8s scheduler definition in **/etc/kubernetes/manifests/kube-scheduler.conf**
+
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: my-custom-scheduler
+    namespace: kube-system
+  spec:
+    containers:
+    -  command:
+       - kube-scheduler
+       - --address:127.0.0.1
+       - kubeconfig=/etc/kubernetes/scheduler.conf
+       # For HA setup where you have multiple master nodes with k-scheduler process on both of them
+       - --leader-elect=true
+       # Custom name for scheduler
+       - --scheduler-name=my-custom-scheduler
+       - --lock-object-name-mycustom-scheduler
+       image: k8s.gcr.io/kube-scheduler-amd64:v1.11.3
+       name: kube-scheduler
+  ```
+
+* Specify custom scheduler to use for a given pod in the pod definition file
+
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: nginx
+  spec:
+    containers:
+    - image: nginx
+      name: nginx
+    schedulerName: my-custom-scheduler
+  ```
+
+### 2.10.2 Commands
+
+* Check which node the scheduler gets assigned with `kubectl get events`
+* View logs of custom scheduler with `kubectl logs my-custom-scheduler --namespace=kube-system`
+
+# 3. Logging & Monitoring
+
+* Tools for monitoring pods and nodes
+  * metrics server
+
+## 3.1 Metrics Server
+
+* Installation
+
+```text
+git clone https://github.com/kubernetes-incubator/metrics-server.git
+kubectl create -f metric-server/deploy/1.8+/
+```
+
+* View cluster performance
+
+```text
+kubectl top node
+kubectl top pod
+```
+
+## 3.2 Viewing application logs
+
+* View pod logs with `kubectl logs -f podname`
+* For multi-container pods, to view container logs within a pod do `kubectl logs -f podname containername`
+
+# 4. Application Lifecycle Management
+
+## 4.1 Rolling Updates and Rollbacks
+
+* Some commands to help check deployment or rollout history
+
+* Check status of deployment with `kubectl rollout status deployment/myapp-deployment`
+
+* Check rollout history with `kubectl rollout history deployment/myapp-deployment`
+
+* Update with 
+
+  * `kubectl apply -f deployment.yaml` or 
+  * `kubectl set image deployment/myapp-deployment <container-name>=nginx:1.9.1`
+
+* Rollback with `kubectl rollout undo deployment/myapp-deployment`
+
+* Check rollout strategy with `kubectl describe deploy deploy-name` and look for **StrategyType**
+
+* Change rollout strategy with `kubectl edit deploy deploy-name` 
+
+  ```yaml
+  spec:
+    strategy:
+      type: Recreate
+  ```
+
+### 4.1.1 Update strategy
+
+* Recreate - Replace all deployed pods at once
+* Rolling update - Replace in batches (DEFAULT)
+  * **RollingUpdateStrategy** tells you how many pods can go down at one time during rolling updates.
+
+## 4.2 Commands and Arguments in k8s
+
+In dockerfile we can have
+
+```yaml
+FROM ubuntu
+ENTRYPOINT ["sleep"]
+CMD ["10"]
+```
+
+Similar to specifying `CMD` and `ENTRYPOINT` in docker
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ubuntu-sleeper-pod
+spec:
+ containers:
+ - name: ubuntu-sleeper
+   image: ubuntu-sleeper
+   command: ["sleep2.0"] # overwrites ENTRYPOINT ["sleep"]
+   args: ["15"] # = overwrites CMD ["10"]
+```
+
+Alternatively we can specify as an array with
+
+```yaml
+spec:
+  command:
+  - "sleep"
+  - "10"
+```
+
+## 4.3 Configure environmental variables in apps
+
+Specify env variables in pod definition files
+
+```yaml
+spec:
+ containers:
+ - name: simple-webapp-color
+   image: simple-webapp-color
+   ports:
+   - containerPort: 8080
+   env:
+   - name: APP_COLOR
+     value: pink
+```
+
+### 4.3.1 Via ConfigMap
+
+Pod definition file references the ConfigMap
+
+```yaml
+spec:
+  containers:
+    env:
+    - name: APP_COLOR
+      valueFrom:
+        configMapKeyRef:
+          name: app-config
+          key: APP_COLOR
+```
+
+ConfigMap app-config:
+
+```yaml
+APP_COLOR: blue
+APP_MODE: prod
+```
+
+#### 4.3.1.1 Imperative
+
+Creating configmap by specifying key-value pairs `kubectl create configmap app-config --from-literal=APP_COLOR=blue --from-literal=APP_MOD=prod`
+
+By specifying files `kubectl create configmap app-config --from-file=app_config.properties`
+
+#### 4.3.1.2 Declarative
+
+configmap.yaml, create with `kubectl apply -f configmap.yaml`
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+ name: app-config
+data:
+ APP_COLOR: blue
+ APP_MODE: prod
+```
+
+#### 4.3.1.3 ConfigMap commands
+
+View/describe configmaps `kubectl get configmaps cfgmap`  and `kubectl describe configmaps cfgmap`
+
+### 4.3.2 Via Secrets
+
+Pod definition referencing secrets
+
+```yaml
+spec:
+  containers:
+    env:
+    - name: APP_COLOR
+      valueFrom:
+        secretKeyRef:
+          name: mysecret # Name of Secret
+          key: appcolor
+```
+
+app_secret.properties
+
+```yaml
+DB_Host: mysql
+DB_User: root
+DB_Password: passwrd
+```
+
+Alternatively use **envFrom** to import all Secret's data as environment variables instead of specifying each
+
+```yaml
+spec:
+  containers:
+      envFrom:
+      - secretRef:
+          name: mysecret # Name of Secret
+```
+
+Secrets in Pods as volumes
+
+```yaml
+volumes:
+- name: app-secret-volume
+  secret:
+    secretName: app-secret
+```
+
+Inside container, stored in **/opt/app-secret-volumes**, files as keys
+
+	#### 4.3.2.1 Imperative
+
+```text
+# Via command line
+kubectl create secret generic secret-name --from-literal=DB_Password=passwrd
+# Via file
+kubectl create secret generic app-secret --from-file=app_secret.properties 
+```
+
+#### 4.3.2.2 Declarative
+
+* Values must be stored in base64, then use `kubectl create/apply`
+
+secret-data.yaml
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+ name: app-secret
+data:
+  DB_Host: bX1zcWw=
+  DB_User: cm9vdA==
+  DB_Password: cGFzd3Jk
+```
+
+* Alternatively use **stringData** to avoid base64
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+ name: app-secret
+stringData:
+  DB_Host: mysql
+  DB_User: user
+  DB_Password: Password1
+```
+
+#### 4.3.2.3 Commands
+
+View/describe secrets with `kubectl get/describe secrets`
+
+To view values, do `kubectl get secret app-secret -o yaml`
+
+​	
+
