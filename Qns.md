@@ -34,3 +34,5 @@ Some questions that arise while going through KodeKloud's course. To be updated 
 6. How exactly do you use DS for monitoring software?
 
 7. What exactly is `--leader-elect` used for in custom scheduler? How do I use it?
+
+8. Is there a way to upgrade kubeadm and kubelet on worker nodes without SSH to it from master?

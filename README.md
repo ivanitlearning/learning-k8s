@@ -91,6 +91,10 @@ Start the nginx container using a different command and custom arguments.
 
 `kubectl run nginx --image=nginx --command -- <cmd> <arg1> ... <argN>`
 
+Exec bash shell into container within pod `kubectl exec -it pod-name --container main-app -- /bin/bash`
+
+Or just execute command and exit `kubectl exec -it pod-name --container main-app -- cat /var/log/syslog`
+
 ## 1.7 k8s resources
 
 ## 1.8 ReplicaSet
@@ -891,5 +895,203 @@ View/describe secrets with `kubectl get/describe secrets`
 
 To view values, do `kubectl get secret app-secret -o yaml`
 
-​	
+## 4.4 Multi-container Pods
+
+* Allow multiple containers to run together
+* Here there's an array of two member containers in pod definition.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: simple-webapp
+  labels:
+    name: simple-webapp
+spec:
+  containers:
+  - name: simple-webapp
+    image: simple-webapp
+    ports:
+    - ContainerPort: 8080
+  - name: log-agent
+    image: log-agent
+```
+
+## 4.5 Init Containers
+
+* When pod is created processes containers named initContainers have commands which are run to completion (just once) before the other containers start.
+* Specified in pod definition
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+  labels:
+    app: myapp
+spec:
+  containers:
+  - name: myapp-container
+    image: busybox:1.28
+    command: ['sh', '-c', 'echo The app is running! && sleep 3600']
+  initContainers:
+  - name: init-myservice
+    image: busybox:1.28
+    command: ['sh', '-c', "until nslookup myservice.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local; do echo waiting for myservice; sleep 2; done"]
+  - name: init-mydb
+    image: busybox:1.28
+    command: ['sh', '-c', "until nslookup mydb.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local; do echo waiting for mydb; sleep 2; done"]
+```
+
+* kubelet runs the Pod's init containers in the order they appear in the Pod's spec (so only one init container is run at a time until they are all complete) [[ref](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/)]
+
+* If command in init container fails, it'll enter a CrashLoopBackoff state and containers won't execute.
+
+# 5. Cluster Maintenance
+
+## 5.1 Node maintenance
+
+* Node down for > 5 min (default), pods are terminated on that node. 
+* If part of RS or deployment, will be re-created on other nodes. Otherwise lost forever.
+* Pod eviction timeout - Time taken for pods to be recreated when nodes go down. Set on controller manager. Default 5 min.
+* If you need < 5 min (default) to take the node offline, you can go ahead. However, if you can't, drain the nodes with `kubectl drain node-name` to remove the pods on it.
+  * Pods on node terminated and re-created elsewhere
+  * Node marked as unschedulable, no scheduling until unmarked.
+  * Re-enable node with `kubectl uncordon node-name`
+  * Pods will *not* be moved back to the uncordoned node automatically.
+* To mark node un-schedulable without terminating pods `kubectl cordon node-name`
+
+## 5.2 Kubernetes Versions
+
+* Check installed k8s version on nodes with `kubectl get nodes`
+* Format: v1.10.3 - {major}.{minor}.{patch}
+
+## 5.3 Cluster Upgrade
+
+* kube-apiserver needs to be the highest version in the cluster (note the minor version number)
+* Components versions can be
+  * x-1 versions lower than kube-apiserver
+    * controller-manager
+    * kube-scheduler
+  * x-2 versions lower than kube-apiserver
+    * kubelet
+    * kube-proxy
+
+* kubectl can be one version higher or lower than kube-apiserver
+
+### 5.3.1 Upgrading methods
+
+1. Easily upgraded if on cloud services
+2. kubeadm can upgrade with `kubeadm upgrade plan` and `kubeadm upgrade apply`
+3. kubeadm doesn't install or upgrade kubelet
+
+All-at-once:
+
+* Upgrade all the worker nodes at once with disruption
+
+Rolling:
+
+* Pods get moved to other nodes, then down for upgrading
+
+New nodes (AWS immutable):
+
+* New nodes with higher k8s version get added to cluster
+* Pods get moved to the new nodes, and removed from old ones
+
+### 5.3.2 Upgrading sequence
+
+1. Master node gets upgraded first, then worker nodes.
+2. While upgrading, control plane components eg. api-server, scheduler and controller-manager go down
+3. Worker nodes and apps still functioning. 
+4. All management functions are down ie. no `kubectl`, no deployment or modification allowed.
+5. Now upgrade worker node kubeadm then kubelet
+
+### 5.3.3. Upgrade instructions in detail
+
+#### 5.3.3.1 Upgrade master node
+
+1. Check what you can upgrade components to with `kubeadm upgrade plan`, 
+   * Note this is the highest you can upgrade the cluster to if kubeadm is not upgraded
+2. Drain the node with `kubectl drain masternode`
+   1. Verify the master node has unschedulable taint, and has no running pods
+
+Upgrade the kubeadm package if needed (to support higher cluster versions)
+
+1. Check available package versions for kubeadm to upgrade to with `apt list -a kubeadm`, say **1.20.0-00**
+2. Upgrade the kubeadm on master node with `apt upgrade kubeadm=1.20.0-00`
+   1. Verify kubeadm has been upgraded to version `kubeadm version`
+3. Verify there are now new cluster versions to upgrade to with `kubeadm upgrade plan`, say **v1.20.00**
+4. Upgrade the cluster with `kube upgrade apply v1.20.0`
+
+Now upgrade the kubelet package version
+
+1. Upgrade the kubelet version, check available package versions with `apt list -a kubelet` 
+   1. Check current installed kubelet package version with `dpkg -l | grep kubelet`
+   2. Upgrade kubelet with `apt upgrade kubelet=1.20.0-00`
+
+When complete, uncordon the node
+
+1. Uncordon the master node with `kubectl uncordon masternode`
+   1. Verify the taint is gone
+
+#### 5.3.3.2 Upgrade worker nodes
+
+Next upgrade the worker nodes (same steps above)
+
+1. Drain worker node (from master node)
+2. Install package kubeadm with target version on worker node
+3. Upgrade the node config to the same version with `kubeadm upgrade node`
+   * Note: This step is not present above for master node.
+4. Install package kubelet with target version on worker node
+5. Exit, go back to master node, check with `kubectl get nodes` that kubelet is upgraded on worker node.
+
+## 5.4 Backup and Restore
+
+* Save all resource config in all namespaces to yaml `kubectl get all --all-namespaces -o yaml`
+* Alternative is to backup etcd
+
+### 5.4.1 Backup etcd
+
+* etcd runs as a pod on the master node.
+
+* Check the arguments for running etcd by describing the pod
+
+  ```text
+  etcd
+  --cert-file=/etc/kubernetes/pki/etcd/server.crt	# ETCDCTL_CERT
+  --data-dir=/var/lib/etcd 						# etcd datadir
+  --key-file=/etc/kubernetes/pki/etcd/server.key	# ETCDCTL_KEY
+  --listen-client-urls=https://127.0.0.1:2379,https://10.32.62.3:2379 # etcd endpoint
+  --trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt # ETCDCTL_CACERT
+  ```
+
+* First export the environmental variables so you don't need to specify them [[ref](https://stackoverflow.com/questions/52695573/why-do-i-need-to-put-etcdctl-api-3-in-front-of-etcdctl-for-etcdctl-snapshot-save)]
+
+  ```yaml
+  export ETCDCTL_API=3
+  export ETCDCTL_CACERT=/etc/etcd/ca.pem
+  export ETCDCTL_CERT=/etc/etcd/kubernetes.pem
+  export ETCDCTL_KEY=/etc/etcd/kubernetes-key.pem
+  etcdctl member list --endpoints=https://127.0.0.1:2379 
+  ```
+
+* The CACERT, CERT and KEY are needed if the etcd DB is TLS protected.
+
+  Otherwise you need to preface all commands with 
+
+  ```text
+  ETCDCTL_API=3 etcdctl --endpoints=https://[127.0.0.1]:2379 \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  --cert=/etc/kubernetes/pki/etcd/etcd-server.crt \
+  --key=/etc/kubernetes/pki/etcd/etcd-server.key snapshot save /tmp/snapshot.db
+  ```
+
+* Save snapshot of etcd with `etcdctl snapshot save snapshot.db`
+* Check status of snapshot `etcdctl snapshot status snapshot.db`
+* Check with `ps aux` where the etcd **--data-dir** is
+* To restore etcd from backup
+  1. Stop kube-apiserver service `service kube-apiserver stop`
+  2. Restore snapshot with `etcdctl snapshot restore snapshot.db --data-dir /path/to/new/data/dir/`
+  3. Update the --data-dir by checking the staticPodPath of kubelet then edit the yaml file for kubelet to re-create the etcd pod
+  4. Start the kube-apiserver service `service kube-apiserver start` and restart `service etcd restart`
 
