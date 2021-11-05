@@ -36,3 +36,26 @@ Some questions that arise while going through KodeKloud's course. To be updated 
 7. What exactly is `--leader-elect` used for in custom scheduler? How do I use it?
 
 8. Is there a way to upgrade kubeadm and kubelet on worker nodes without SSH to it from master?
+
+9. Why are there extra steps in the solution demo for `etcdctl snapshot restore` not mentioned in the lecture?
+
+10. The documentation for restoring etcdctl cluster [links to etcd.io](https://kubernetes.io/docs/tasks/administer-cluster/configure-upgrade-etcd/), but this is outside kubernetes.io. Can use for exam?
+
+11. In the etcdctl restore lab I omitted these arguments and could restore the svc and deploy, but the pod was still stuck in pending even after 10 min. Is this acceptable?
+
+    ```text
+    --inital-cluster="master"=https://127.0.0.1:2379
+    --name="master"
+    --inital-advertise-peer-urls="https://127.0.0.1:2380"
+    --initial-cluster-token="etcd-cluster-1"
+    ```
+
+12. Try an etcdctl backup and restore in another lab to see if can work without the issues.
+
+13. 
+
+# Notes
+
+Notes here don't fit into the main notes
+
+1. kube-apiserver is available as a service and binary [only if installed directly](https://stackoverflow.com/questions/51666507/how-can-kube-apiserver-be-restarted?rq=1), otherwise it is provisioned as pod on namespace kube-system by kubeadm

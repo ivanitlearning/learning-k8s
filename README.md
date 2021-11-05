@@ -1086,12 +1086,126 @@ Next upgrade the worker nodes (same steps above)
   --key=/etc/kubernetes/pki/etcd/etcd-server.key snapshot save /tmp/snapshot.db
   ```
 
+* Check that you can list members if all the env variables correct or arguments passed correctly with `etcdctl member list`
+
+  ```text
+  root@controlplane:~# env | grep ETCDCTL
+  ETCDCTL_CERT=/etc/kubernetes/pki/etcd/server.crt
+  ETCDCTL_API=3
+  ETCDCTL_CACERT=/etc/kubernetes/pki/etcd/ca.crt
+  ETCDCTL_KEY=/etc/kubernetes/pki/etcd/server.key
+  root@controlplane:~# etcdctl member list --endpoints=127.0.0.1:2379
+  c94fae94143096ba, started, controlplane, https://10.3.84.3:2380, https://10.3.84.3:2379
+  ```
+
 * Save snapshot of etcd with `etcdctl snapshot save snapshot.db`
-* Check status of snapshot `etcdctl snapshot status snapshot.db`
+
+* Check status of snapshot `etcdctl snapshot status snapshot.db -w=table`
+
 * Check with `ps aux` where the etcd **--data-dir** is
+
 * To restore etcd from backup
-  1. Stop kube-apiserver service `service kube-apiserver stop`
+  1. Stop kube-apiserver service `service kube-apiserver stop` (if k8s controller was manually installed)
   2. Restore snapshot with `etcdctl snapshot restore snapshot.db --data-dir /path/to/new/data/dir/`
   3. Update the --data-dir by checking the staticPodPath of kubelet then edit the yaml file for kubelet to re-create the etcd pod
-  4. Start the kube-apiserver service `service kube-apiserver start` and restart `service etcd restart`
+  4. Start the kube-apiserver service `service kube-apiserver start` and restart `service etcd restart` (not required)
+
+# 6. Security
+
+## 6.1 k8s Security Primitives
+
+* Disable password authentication, allow private keys only.
+* Authentication options to kube-apiserver
+  * Files - Username, passwords
+  * Files - Usernames, tokens
+  * Certs
+  * External authentication - LDAP, AD
+  * Service accounts
+
+* Authorization - What permissions they have?
+  * RBAC/ABAC
+
+etc (skip notes)
+
+## 6.2 Authentication
+
+* Users are managed by kube-apiserver
+* Authentication via
+  * Static pw file
+  * Static token file
+  * Certs
+  * ID services eg. Kerberos
+
+### 6.2.1 Static password and token file - Basic
+
+#### 6.2.1.1  Static password
+
+user-details.csv (note group column may be absent)
+
+```csv
+password123,user1,u0001,group1
+password321,user2,u0002,group2
+```
+
+kube-apiserver.service
+
+```text
+ExecStart=/usr/local/bin/kube-apiserver
+  --basic-auth-file=user-details.csv
+```
+
+Restart kube-apiserver to take effect
+
+If kubeadm was used to set up cluster, modify pod definition file for kube-apiserver (default: /etc/kubernetes/manifests/kube-apiserver.yaml) to add
+
+```yaml
+spec:
+  containers:
+  - command:
+  - kube-apiserver
+  - --basic-auth-file=user-details.csv
+```
+
+and kubeadm will automatically recreate kube-apiserver pod
+
+* Check you can authenticate with username, pw with `curl -v -k https://master-node:6443/api/v1/pods -u "user:password"`
+
+#### 6.2.1.2 Static token file
+
+user-token-details.csv
+
+```csv
+<token1>,user1,u0001,group1
+<token2>,user2,u0002,group2
+```
+
+Similar to password file, used with `--token-auth-file=user-token-details.csv` instead. curl command now is `curl -v -k https://master-node:6443/api/v1/pods --header"Authorization: Bearer <token>`
+
+Notes:
+
+1. Generally not recommended to use static password/token files because creds in plaintext
+2. Deprecated since 1.19  
+
+## 6.3 TLS in k8s
+
+* Certificates or public keys come in *.crt, *.pem, doesn't have word "key" in them
+  * server.crt
+  * server.pem
+  * client.crt
+  * client.pem
+* Private keys have the word "key" in them
+  * server.key
+  * server-key.pem
+  * client.key
+  * client-key.pem
+
+* Server certs for servers. These servers have public certs and private keys associated
+  * kube-apiserver
+    * Clients (each have their own key pairs): kubectl, kube-scheduler, kube-controller-manager, kube-proxy
+  * etcd server
+  * kubelet server
+
+* 
+
+### 6.3.2 Certificate generation
 
