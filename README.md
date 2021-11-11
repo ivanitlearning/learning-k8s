@@ -95,6 +95,8 @@ Exec bash shell into container within pod `kubectl exec -it pod-name --container
 
 Or just execute command and exit `kubectl exec -it pod-name --container main-app -- cat /var/log/syslog`
 
+Delete pods quicker with `--force`
+
 ## 1.7 k8s resources
 
 ## 1.8 ReplicaSet
@@ -552,7 +554,7 @@ Limitations
           image: monitoring-agent
   ```
 
-* reated with `kubectl create 0f daemon-set.yaml`
+* Created with `kubectl create 0f daemon-set.yaml`
 
 * Viewed with `kubectl get daemonsets` or `kubectl describe daemonsets`
 
@@ -850,7 +852,7 @@ volumes:
 
 Inside container, stored in **/opt/app-secret-volumes**, files as keys
 
-	#### 4.3.2.1 Imperative
+#### 4.3.2.1 Imperative
 
 ```text
 # Via command line
@@ -1205,7 +1207,693 @@ Notes:
   * etcd server
   * kubelet server
 
-* 
 
-### 6.3.2 Certificate generation
+### 6.3.1
+
+
+
+## 6.4 Certificates API
+
+* CA server is just a pair of key files, typically the master node.
+* Users create CertificateSigningRequest object
+  * Admins can review requests and approve them
+
+### Steps
+
+1. User first creates key jane.key and sends it to admin
+
+   ```bash
+   openssl genrsa -out jane.key 2048
+   ```
+
+2. Admin takes the key and generates a CSR file
+
+   ```bash
+   openssl req -new -key jane.key -subj "/CN=jane" -out jane.csr 
+   ```
+
+3. Then uses the CSR file to generate CSR resource
+
+   ```yaml
+   apiVersion: certificates.k8s.io/v1beta1
+   kind: CertificateSigningRequest
+   metadata:
+     name: jane
+   spec:
+     groups:
+     - system:authenticated
+     usages:
+     - digital signature
+     - key encipherment
+     - server auth
+     request:
+       {cat jane.csr | base64}
+   ```
+
+4. When generated view all CSRs with `kubectl get csr` and approve with `kubectl certificate approve csr-name`
+
+* You can view the certificate with `kubectl get csr csr-name -o yaml`
+  * The certificate itself is base64 encoded
+* kube-controller-manager contains the paths of cluster signing cert file and signing key
+
+## 6.5 KubeConfig
+
+* File holds config that `kubectl` will need as arguments
+
+* Default stored in **$HOME/.kube/config**
+
+* File consists of three sections: Clusters, Users, Contexts (eg. $user@$cluster)
+
+  * Contexts link the users to cluster
+  * Use `--current-context` with kubectl to see current context
+
+* View the kubeconfig file with `kubectl config view`, add `--kubeconfig=/config/file` for some other config file, or to switch context
+
+* Switch context with `kubectl config use-context produser@production`
+
+* Under **cluster** can specify CA
+
+  ```yaml
+  clusters:
+  - name: production
+    cluster:
+      certificate-authority: /etc/kubernetes/pki/ca.crt
+      # or use base64 -w0 ca.crt and paste below
+      certificate-authority-data: <base64 data>    
+  ```
+
+## 6.6. API Groups
+
+* Use curl to enumerate with
+
+  * Check k8s version with `curl https://kube-master:6443/version`
+  * Check pods with `curl https://kube-master:6443/api/v1/pods`
+  * The APIs here are /version and /api
+
+* Will get error if you list API groups with `curl https://localhost:6443 -k`, need to specify these arguments for authentication
+
+  ```text
+  --key admin.key
+  --cert admin.crt
+  --cacert ca.crt
+  ```
+
+* Alternatively start `kubectl proxy` by default on TCP 8001, this will automatically specify the certs for you so you can just `curl http://localhost:8001 -k`
+  * Not the same as kube proxy
+
+## 6.7 Authorization
+
+* Allow only certain k8s users to perform authorized tasks like enumerating resources but not creating/destroying them
+
+* Types:
+
+  1. Node authorization
+  2. ABAC - Attribute-based
+  3. RBAC - Role-based
+  4. Webhook - 3rd party authorization
+
+* When multiple authorization nodes specified, it is handled in order of specification
+
+  ```text
+  # kube-apiserver definition
+  --authorization-mode=Node,RBAC,Webhook
+  ```
+
+  1. Node handles only node requests, denies everything else
+  2. RBAC performs checks and grants users permissions, will not go on to Webhook
+
+* Each time a request is denied, it gets passed to next node for checks. If it grants, it exits and doesn't pass on.
+
+## 6.8 Role-based Access Control (RBAC)
+
+* Create roles with yaml. This is a role definition
+
+  ```yaml
+  apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    name: developer
+    namespace: blue
+  rules:
+  - apiGroups: [""] # "" indicates the core API group if blank
+    resources: ["pods"]
+    verbs: ["get", "list", "update", "delete", "create"]
+  - apiGroups: [""] # Can specify multiple API groups
+    resources: ["ConfigMap"]
+    verbs: ["create"]
+    resourceNames: ["blue","orange"] # Allows access only to blue, orange pods
+  ```
+
+* Bind a user to the role with a rolebinding definition. Here **dev-user** is bound to **developer** role
+
+  ```yaml
+  apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: devuser-developer-binding
+  subjects:
+  - kind: User
+    name: dev-user # "name" is case sensitive
+    apiGroup: rbac.authorization.k8s.io
+  roleRef:
+    kind: Role
+    name: developer
+    apiGroup: rbac.authorization.k8s.io
+  ```
+
+* List roles with `kubectl get roles`
+
+* List rolebindings with `kubectl get rolebindings`
+
+* List details about resources and permissions for each resource with `kubectl describe role role-name`, same describe for rolebindings
+
+* Check for permissions for current user (returns yes/no)
+
+  * `kubectl auth can-i create deployments`
+  * `kubectl auth can-i delete nodes`
+
+* Specify `--as username` to view permissions as that user in specific namespace
+
+  * `kubectl auth can-i create deployments --as dev-user --namespace ns-1`
+
+* To check which API groups each resource belongs to, do `kubectl api-resources -o wide | grep resource-type`. Verify with `kubectl explain resource-type` that the Version field has the same API group [[ref](https://stackoverflow.com/questions/57821065/which-api-group-in-k8s)]
+
+## 6.9 Cluster Roles
+
+* Some resources like nodes can't be grouped by namespace (ie. grouped under a namespace) because they are cluster wide. 
+
+* Resources are either namespace-wide or cluster-wide (eg. namespace)
+
+* View resources which are namespace wide `kubectl api-resources --namespaced=true` or False
+
+* ClusterRole and ClusterRoleBinding are like Roles and RoleBindings, except cluster-wide.
+
+* ClusterRole example:
+
+  ```yaml
+  apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRole
+  metadata:
+    name: cluster-administrator
+  rules:
+  - apiGroups: [""] # "" indicates the core API group
+    resources: ["nodes"]
+    verbs: ["get", "list", "delete", "create"]
+  ```
+
+* ClusterRoleBinding binds the user to the role
+
+  ```yaml
+  apiVersion: rbac.authorization.k8s.io/v1
+  kind: ClusterRoleBinding
+  metadata:
+    name: cluster-admin-role-binding
+  subjects:
+  - kind: User
+    name: cluster-admin
+    apiGroup: rbac.authorization.k8s.io
+  roleRef:
+    kind: ClusterRole
+    name: cluster-administrator
+    apiGroup: rbac.authorization.k8s.io
+  ```
+
+* Although pods are namespace-wide, you can use a ClusterRole to allow the user access to all pods across the cluster.
+
+* To check which request verbs are available for a resource, say persistentvolumes do `kubectl api-resources -o wide | grep persistentvolumes`
+
+  * [Documentation](https://kubernetes.io/docs/reference/access-authn-authz/authorization/#review-your-request-attributes) (not too helpful)
+
+## 6.10 Service Account
+
+* Different from user accounts which are used by humans
+
+* Used by applications to authorise access
+  * Prometheus using service account t monitor cluster
+  * Jenkins/Gitlab using service accounts to deploy applications
+
+* Create service account with `kubectl create serviceaccount dashboard-sa`
+  * Token is automatically created (view with `describe`) as secret
+  
+* View service account with `kubectl get serviceaccount`
+
+* Now can use RESTful API to view `curl https://kube-master:6443/api -k --header "Authorization: Bearer <base64-secret>`
+
+* If the app which uses the secret is itself a pod on the cluster, it is mounted as a volume mount in **/var/run/secrets/kubernetes.io/serviceaccount**. View with `describe pod`, this one shows default token which is automatically mounted if nothing is specified.
+
+  ```yaml
+  Mounts:
+    /var/run/secrets/kubernetes.io/serviceaccount from default-token-j4hkv (ro)
+  ```
+
+* Can view it with `kubectl exec -it pod-name cat /var/run/secrets/kubernetes.io/serviceaccount`
+
+* To specify service account in pod definition (delete and re-create pod). 
+
+  ```yaml
+  # Pod definition file
+  spec:
+    serviceAccountName: dashboard-sa
+    automountServiceAccountToken: false # Specify this to avoid adopting service account token
+  ```
+
+
+## 6.11 Image Security
+
+* To use an image from private repository first login then do a run
+
+  * `docker login private-registry.io`
+  * `docker run private-registry.io/apps/internal-app`
+
+* Create a secret to store the creds
+
+  ```text
+  kubectl create secret docker-registry regcred \
+  --docker-server=private-registr \
+  --docker-username=user
+  --docker-password=password
+  --docker-email=user@mail.com
+  ```
+
+* Specify in pod definition with
+
+  ```yaml
+  spec:
+    containers:
+    - name: nginx
+      image: private-registry.io/apps/internal-app
+    imagePullSecrets:
+    - name: regcred
+  ```
+
+## 6.12 Security Contexts
+
+* Like in Docker, we can specify run-as for containers and Linux capabilities 
+
+  ```yaml
+  # Pod definition
+  spec:
+    containers:
+    - name: ubuntu
+      image: ubuntu
+      command: ["sleep", "3600"]
+      securityContext:
+        runAsUser: 1000
+        capabilities: 
+          add: ["MAC_ADMIN"]
+  ```
+
+* Supported only at the container, not pod level
+
+* Check what user is running in the container with `kubectl exec -it podname -- <cmd>`
+
+## 6.13 Network Policies
+
+* Similar to NACLs
+
+* Default k8s doesn't block any traffic
+
+* Created as k8s resource. This one applies 3306 ingress for pod api-pod.
+
+  ```yaml
+  apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+   name: db-policy
+  spec:
+    podSelector:
+      matchLabels:
+        role: db # Selects DB pod via label to apply the policy to
+    policyTypes:
+    - Ingress
+    ingress:
+    - from:
+      - ipBlock: # Works as OR with ns and pod selector if the "-" specified
+          cidr: 172.17.0.0/16 # Can also specify /32 for one IP
+          except:
+          - 172.17.1.0/24
+      - namespaceSelector:
+          matchLabels:
+            name: prod # Select other namespaces to apply to
+      - podSelector: # If omitted, assumes that all pods in NS will be allowed
+          matchLabels:
+            role: api-pod # Selects the pod to allow traffic FROM
+      ports:
+      - protocol: TCP
+        port: 3306
+  ```
+
+* Note that policies are stateful (replies to ingress automatically allowed)
+
+# 7. Storage
+
+## 7.1 Volumes
+
+* Can be mounted on pods [[ref](https://kubernetes.io/docs/concepts/storage/volumes/#hostpath)]
+
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: test-pd
+  spec:
+    containers:
+    - image: k8s.gcr.io/test-webserver
+      name: test-container
+      volumeMounts:
+      - mountPath: /test-pd # Where the mount is found inside the pod
+        name: test-volume
+    volumes:
+    - name: test-volume # This must match with name in volumeMounts
+      hostPath:
+        path: /data # directory location on host
+        type: Directory # this field is optional
+  ```
+
+## 7.2 Persistent Volumes
+
+* Cluster-wide storage volumes, users can select storage from pool using PVC. 
+
+* `kubectl get persistentvolume`
+
+* Definition file:
+
+  ```yaml
+  apiVersion: v1
+  kind: PersistentVolume
+  metadata:
+    name: pv-vol1
+  spec:
+    accessModes: [ "ReadWriteOnce" ]
+    capacity:
+     storage: 1Gi
+    hostPath:
+     path: /tmp/data
+  ```
+
+
+## 7.3 Persistent Volume Claims
+
+* Every PVC is bound to a single PV.
+
+* One-to-one PVC to PV. No other claims can use the same volume
+
+* If no volumes, PVC remains pending until PV available
+
+* Note: Access Modes on PVC, PV must match.
+
+* Can use labels and selectors to bind to preferred volume if multiple available
+
+* PVC definition file
+
+  ```yaml
+  apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: myclaim
+  spec:
+    accessModes: 
+      - ReadWriteOnce
+    selector:
+      matchLabels:
+        release: "stable"
+    resources:
+     requests:
+       storage: 1Gi
+  ```
+  
+* Query with `kubectl get persistentvolumeclaim`
+
+* Once PVC deleted, PV by default is **Retain** or not available for reuse until manually reclaimed.
+
+  * **Delete** setting will delete the PV once PVC is deleted; frees up storage.
+  * **Recycle** will delete all data stored and made available to other PVCs
+
+* Pod usage. Once created, a PVC can be specified in the pod definition
+
+  ```yaml
+  kind: Pod
+  metadata:
+    name: mypod
+  spec:
+    containers:
+      - name: myfrontend
+        image: nginx
+        volumeMounts:
+        - mountPath: "/var/www/html"
+          name: mypd
+    volumes:
+      - name: mypd
+        persistentVolumeClaim:
+          claimName: myclaim
+  ```
+
+## 7.4 Storage Class
+
+* Static provisioning is when you need to create the storage on the cloud provider, then create the PV then finally the PVC and then include the PVC in the pod definition
+
+* Dynamic provisioning automatically creates storage on the cloud provider so you only need to create PVC to reference SC directly.
+
+  * PV is automatically created by storage class
+
+* For Google cloud, SC definition is
+
+  ```yaml
+  apiVersion: storage.k8s.io/v1
+  kind: StorageClass
+  metadata:
+     name: google-storage
+  provisioner: kubernetes.io/gce-pd
+  ```
+
+* If the storage provider supports it can specify different types of storage via `type`. Check [this](https://kubernetes.io/docs/concepts/storage/storage-classes/)
+
+  * AWS: io1, gp2, st1 etc
+  * GCE: pd-standard, pd-ssd
+
+# 8. Networking
+
+Lectures explain Linux namespaces and how you can use it manually to create isolated regions within a host, and how to connect them together. How docker connects the containers using bridge network and forwards the port to the host using iptables is also explained.
+
+## 8.1 Linux namespaces
+
+* Create new network NS `ip netns add red`
+
+* List NS `ip netns`
+
+* View interfaces `ip link`
+
+* Exec command in NS `ip netns exec red <cmd>`
+
+* To connect two NS together
+
+  1. Create the virtual cable  with interfaces (**veth-red** and **veth-blue**) on both ends `ip link add veth-red type veth peer name veth-blue`
+
+  2. Attach each interface to NS
+
+     ```bash
+     ip link set veth-red netns red
+     ip link set veth-blue netns blue
+     ```
+
+  3. Give each interface an IP address (here both are in the same subnet)
+
+     ```bash
+     ip netns exec red ip addr add 192.168.15.1/24 dev veth-red
+     ip netns exec blue addr add 192.168.15.2/24 dev veth-blue
+     ```
+
+  4. Bring up the NS interfaces
+
+     ```bash
+     ip netns exec red ip link set veth-red up
+     ip netns exec blue ip link set veth-blue up
+     ```
+
+  5. Now you can ping blue veth from red and vice-versa
+
+     ```bash
+     ip netns exec red ping 192.168.15.2
+     ```
+
+* Create a virtual switch in Linux 
+
+  1. `ip link add v-net-0 type bridge` of name **v-net-0**
+
+  2. Check interface of v-switch with `ip link`
+
+  3. Bring interface up with `ip link set dev v-net-0 up`
+
+  4. Create the virtual cables, each end for the NS the other for bridge
+
+     ```bash
+     ip link add veth-red type veth peer name veth-red-br
+     ip link add veth-blue type veth peer name veth-blue-br
+     ```
+
+  5. Set the interfaces to the NS and bridge
+
+     ```bash
+     # For red
+     ip link set veth-red netns red
+     ip link set veth-red-br master v-net-0
+     # For blue
+     ip link set veth-blue netns blue
+     ip link set veth-blue-br master v-net-0
+     ```
+
+  6. Assign the virtual interfaces with IP address
+
+     ```bash
+     ip netns exec red ip addr add 192.168.15.1/24 dev veth-red
+     ip netns exec blue ip addr add 192.168.15.2/24 dev veth-blue
+     ```
+
+  7. Bring up the interfaces
+
+     ```bash
+     ip netns exec red link set veth-red up
+     ip netns exec blue link set veth-blue up
+     ```
+
+  8. Assign an IP to the bridge for connectivity with the host
+
+     ```bash
+     ip addr add 192.168.15.5/24 dev v-net-0
+     ```
+
+  9. Now you can ping either red or blue veth `ping 192.168.15.1`
+
+* The NS still can't reach any IPs other than the host. Check each NS routing table with `ip netns exec blue route`
+
+* To allow connectivity from inside NS to an external network **192.168.1.0/24**
+
+  1. Add a route to 192.168.1.0/24
+
+     ```bash
+     ip netns exec blue ip route add 192.168.1.0/24 via 192.168.15.5
+     # Verify with
+     ip netns exec blue route
+     ```
+
+  2. Enable NAT on the host so external networks can reply to traffic originating from NS (for virtual network 192.168.15.0/24)
+
+     ```bash
+     iptables -t nat -A POSTROUTING -s 192.168.15.0/24 -j MASQUERADE
+     ```
+
+  3. Add a default route to the NS route table
+
+     ```bash
+     ip netns exec blue ip route add default via 192.168.15.5
+     ```
+
+  4. Now you can ping Google `ip netns exec blue ping 8.8.8.8`
+
+* To port forward any traffic hitting port 80 on host to NS blue configure this on iptables
+
+  ```bash
+  iptables -t nat -A PREROUTING --dport 80 --to-destination 192.168.15.2:80 -j DNAT
+  ```
+
+  Verify with `iptables -nvL -t nat`
+
+## 8.2 CNI in k8s
+
+* Check the running kubelet pod or service, look for these arguments then
+  * **--network-plugin**
+  * **--cni-bin-dir** (default **/opt/cni/bin**)
+  * **--cni-conf-dir** (default **/etc/cni/net.d**)
+* Default CNI path is **/opt/cni/bin**
+* Deploy weave to k8s cluster `kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"`
+  * Specify `&env.<options>=setting` to apply. [[Ref](https://www.weave.works/docs/net/latest/kubernetes/kube-addon/#-changing-configuration-options)]
+* Check that the weave pods have been deployed `kubectl get pods -n kube-system`
+
+* Pod IP allocation range can be found by checking logs or config for weave pod or other network plugin
+
+## 8.3 IP address management weave
+
+To be filled up
+
+## 8.4 Service networking
+
+* Pods are hosted on nodes, while services are hosted across cluster-wide ie. ClusterIP
+* When service is created, it is assigned IP from a pre-defined range.
+* kube-proxy on each node creates forwarding rule that forwards traffic meant for the service IP to the pod IP via
+  * userspace
+  * iptables
+  * ipvs
+* Specify the service cluster IP range with `kube-apiserver --service-cluster-ip-range cidr-range` (default 10.0.0/24)
+* Both the pod IP range and service cluster IP range should not overlap
+* Check network forwarding rules created by kube-proxy with `iptables -L -t nat | grep local-cluster`
+  * Or in the logs **/var/log/kube-proxy.log** (dir may vary)
+
+* Tip: Can use `ipcalc` to check IP range of given CIDR
+
+## 8.5 DNS in k8s
+
+* DNS works on a cluster, not node level; IP addressing is handled by the network CNI plugin
+
+* Created services automatically assigned a DNS name and reachable.
+
+* In the same namespace, you can just specify the service name eg. web-service to reach it outside NS, if not append the namespace (app) to it eg. **web-service.app** to make domain.
+
+  | Hostname    | Namespace | Type | Root          | IP address    |
+  | ----------- | --------- | ---- | ------------- | ------------- |
+  | web-service | apps      | svc  | cluster.local | 10.107.37.188 |
+  | 10-244-2-5  | apps      | pod  | cluster.local | 10.244.2.5    |
+
+  Service FQDN: web-service.apps.svc.cluster.local
+
+  Pod FQDN: 10-244-2-5.apps.pod.cluster.local
+
+* Can lookup FQDN and IP of service with `host service-name` (doesn't work for pods except with FQDN)
+
+* DNS records for pods are disabled by default (enable below)
+
+### 8.5.1 CoreDNS in k8s
+
+* Deployed as pod in **kube-system** NS, via a RS in a deployment
+
+* Config file: /etc/coredns/Corefile
+
+  * **proxy** setting in Corefile specifies whether or not pods get DNS name
+  * Corefile initalised as ConfigMap object; edit ConfigMap object to modify config
+
+* CoreDNS available as service **kube-dns** 
+
+* kubelet config file specifies DNS server IP and domain (**clusterDomain** and **clusterDNS** setting)
+
+  * Also found in CoreDNS configmap
+
+* Tip: Check the deployment for the DNS tool used to see whether the path containing the config file is mounted as a volume and how the config is passed in
+
+  ```text
+  root@controlplane:~# k -n kube-system describe deploy coredns
+  ...
+      Args:
+        -conf
+        /etc/coredns/Corefile
+      Limits:
+        memory:  170Mi
+      Requests:
+        cpu:        100m
+        memory:     70Mi
+      Liveness:     http-get http://:8080/health delay=60s timeout=5s period=10s #success=1 #failure=5
+      Readiness:    http-get http://:8181/ready delay=0s timeout=1s period=10s #success=1 #failure=3
+      Environment:  <none>
+      Mounts:
+        /etc/coredns from config-volume (ro)
+    Volumes:
+     config-volume:
+      Type:               ConfigMap (a volume populated by a ConfigMap)
+      Name:               coredns
+      Optional:           false
+    Priority Class Name:  system-cluster-critical
+  ...
+  ```
+
+## 8.6 Ingress
+
+
 

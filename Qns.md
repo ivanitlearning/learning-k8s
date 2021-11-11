@@ -52,10 +52,101 @@ Some questions that arise while going through KodeKloud's course. To be updated 
 
 12. Try an etcdctl backup and restore in another lab to see if can work without the issues.
 
-13. 
+13. Review TLS certificates again, how to create and specify them (if needed for exam)
+
+14. What exactly is cluster when specified in the KubeConfig file?
+
+15. Learn what are API groups?
+
+16. Why are API groups apps and extensions required for creating deployments?
+
+17. How does podselector work for NetworkPolicy when applied to services? 
+
+18. In the NetworkPolicy lab, this config didn't work until I changed "name" to "role". Why?
+
+    ```yaml
+    spec:
+      podSelector:
+        matchLabels:
+          role: db
+    ```
+
+19. Why is the volumeMount specified together with PVC [in this example](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#claims-as-volumes)?
+
+20. Why is the MAC address different for node01 in the lab Explore environment networking namespaces? 
+
+    Qn: What is the MAC address assigned to `node01`?
+    
+    ```text
+    root@controlplane:~# k get nodes -o wide
+    NAME           STATUS   ROLES                  AGE     VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION   CONTAINER-RUNTIME
+    controlplane   Ready    control-plane,master   9m6s    v1.20.0   10.24.246.3   <none>        Ubuntu 18.04.5 LTS   5.4.0-1053-gcp   docker://19.3.0
+    node01         Ready    <none>                 8m16s   v1.20.0   10.24.246.6   <none>        Ubuntu 18.04.5 LTS   5.4.0-1056-gcp   docker://19.3.0
+    
+    root@controlplane:~# arp 10.24.246.6
+    Address                  HWtype  HWaddress           Flags Mask            Iface
+    k8-multi-node-ttyd-1-20  ether   02:42:0a:18:f6:06   C                     eth0
+    root@controlplane:~# arp node01
+    Address                  HWtype  HWaddress           Flags Mask            Iface
+    10.24.246.5              ether   02:42:0a:18:f6:04   C                     eth0
+    ```
+    
+    The address of the node interface is different. Why are there two?
+
+21. For this question, how do you check it with respect to the service? path for CNI binaries are not specified.
+
+    Qn: What is the path configured with all binaries of CNI supported plugins?
+
+    ```text
+    root@controlplane:~# ps aux | grep kubelet
+    root      3916  0.0  0.1 1104196 353748 ?      Ssl  08:39   1:06 kube-apiserver --advertise-address=10.17.78.9 --allow-privileged=true --authorization-mode=Node,RBAC --client-ca-file=/etc/kubernetes/pki/ca.crt --enable-admission-plugins=NodeRestriction --enable-bootstrap-token-auth=true --etcd-cafile=/etc/kubernetes/pki/etcd/ca.crt --etcd-certfile=/etc/kubernetes/pki/apiserver-etcd-client.crt --etcd-keyfile=/etc/kubernetes/pki/apiserver-etcd-client.key --etcd-servers=https://127.0.0.1:2379 --insecure-port=0 --kubelet-client-certificate=/etc/kubernetes/pki/apiserver-kubelet-client.crt --kubelet-client-key=/etc/kubernetes/pki/apiserver-kubelet-client.key --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname --proxy-client-cert-file=/etc/kubernetes/pki/front-proxy-client.crt --proxy-client-key-file=/etc/kubernetes/pki/front-proxy-client.key --requestheader-allowed-names=front-proxy-client --requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt --requestheader-extra-headers-prefix=X-Remote-Extra- --requestheader-group-headers=X-Remote-Group --requestheader-username-headers=X-Remote-User --secure-port=6443 --service-account-issuer=https://kubernetes.default.svc.cluster.local --service-account-key-file=/etc/kubernetes/pki/sa.pub --service-account-signing-key-file=/etc/kubernetes/pki/sa.key --service-cluster-ip-range=10.96.0.0/12 --tls-cert-file=/etc/kubernetes/pki/apiserver.crt --tls-private-key-file=/etc/kubernetes/pki/apiserver.key
+    root      4816  0.0  0.0 3855116 103824 ?      Ssl  08:40   0:28 /usr/bin/kubelet --bootstrap-kubeconfig=/etc/kubernetes/bootstrap-kubelet.conf --kubeconfig=/etc/kubernetes/kubelet.conf --config=/var/lib/kubelet/config.yaml --network-plugin=cni --pod-infra-container-image=k8s.gcr.io/pause:3.2
+    ```
+
+22. When you describe a svc, whats the difference between ClusterIP and endpoint address?
+
+    ```text
+    root@controlplane:~# k describe svc kube-dns -n kube-system
+    Name:              kube-dns
+    Namespace:         kube-system
+    Labels:            k8s-app=kube-dns
+                       kubernetes.io/cluster-service=true
+                       kubernetes.io/name=KubeDNS
+    Annotations:       prometheus.io/port: 9153
+                       prometheus.io/scrape: true
+    Selector:          k8s-app=kube-dns
+    Type:              ClusterIP
+    IP Families:       <none>
+    IP:                10.96.0.10
+    IPs:               10.96.0.10
+    Port:              dns  53/UDP
+    TargetPort:        53/UDP
+    Endpoints:         10.244.0.2:53,10.244.0.3:53
+    Port:              dns-tcp  53/TCP
+    TargetPort:        53/TCP
+    Endpoints:         10.244.0.2:53,10.244.0.3:53
+    Port:              metrics  9153/TCP
+    TargetPort:        9153/TCP
+    Endpoints:         10.244.0.2:9153,10.244.0.3:9153
+    Session Affinity:  None
+    Events:            <none>
+    ```
+
+    
 
 # Notes
 
 Notes here don't fit into the main notes
 
 1. kube-apiserver is available as a service and binary [only if installed directly](https://stackoverflow.com/questions/51666507/how-can-kube-apiserver-be-restarted?rq=1), otherwise it is provisioned as pod on namespace kube-system by kubeadm
+
+2. You can enable autocomplete with alias k=kubectl [with this](https://kubernetes.io/docs/tasks/tools/included/optional-kubectl-configs-bash-linux/)
+
+   ```bash
+   alias k=kubectl
+   complete -F __start_kubectl k
+   ```
+
+3. Useful links for further study
+
+   https://github.com/bmuschko/cka-study-guide
