@@ -132,7 +132,22 @@ Some questions that arise while going through KodeKloud's course. To be updated 
     Events:            <none>
     ```
 
-    
+23. Why do I need to specify annotations in the ingress lab config or it won't work? What are annotations?
+
+    ```yaml
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      annotations:
+        nginx.ingress.kubernetes.io/rewrite-target: /
+        nginx.ingress.kubernetes.io/ssl-redirect: "false"
+      name: ingress-wear-watch
+      namespace: app-space
+    ```
+
+24. How to configure default-backend-http for ingress?
+
+25. How do we know where the `--kubeconfig` option for kube-controller-manager is supposed to point to?
 
 # Notes
 
@@ -140,7 +155,7 @@ Notes here don't fit into the main notes
 
 1. kube-apiserver is available as a service and binary [only if installed directly](https://stackoverflow.com/questions/51666507/how-can-kube-apiserver-be-restarted?rq=1), otherwise it is provisioned as pod on namespace kube-system by kubeadm
 
-2. You can enable autocomplete with alias k=kubectl [with this](https://kubernetes.io/docs/tasks/tools/included/optional-kubectl-configs-bash-linux/)
+2. You can enable autocomplete with alias k=kubectl [with this](https://kubernetes.io/docs/tasks/tools/included/optional-kubectl-configs-bash-linux/). Add these into **~/.bashrc** and `source ~/.bashrc` in **/etc/profile** if required
 
    ```bash
    alias k=kubectl
@@ -150,3 +165,36 @@ Notes here don't fit into the main notes
 3. Useful links for further study
 
    https://github.com/bmuschko/cka-study-guide
+
+4. To make tmux use bash as a default shell edit ~/.tmux.conf to add (create one if non-existent)
+
+   ```conf
+   set-option -g default-shell /bin/bash
+   ```
+
+5. Some keys for tmux
+
+   ```text
+   Ctrl-b " # Starts new horizontal pane
+   Ctrl-b % # New vertical pane
+   Ctrl-b o # Switch pane
+   Ctrl-b Pg Up/Down # Scroll up/down in current pane
+   Ctrl-b x # Quit pane
+   Ctrl-b c # Create window
+   Ctrl-b 0-9 # Switch to window number
+   Ctrl-b , # Rename current window
+   Ctrl-b & # Kill current window
+   ```
+
+6. To paste without messing up alignment in vim do `:set paste`
+
+7. Tips for Alpine environment
+
+   ```text
+   # Add source ~/.bashrc to /etc/profile
+   # Add the bash-completion for k into ~/.bashrc
+   # Set TERM=xterm-256color
+   # Check there is set paste in ~/.vimrc
+   ```
+   
+8. Remember to check whether the correct dirs are mounted apart from the arguments specified to the control plane pods

@@ -5,14 +5,14 @@ Notes on learning Kubernetes, starting with CKA. Based on KodeKloud's course.
 
 ## 1.1 k8s architecture
 
-Master node
+### 1.1.1 Master node
 
 * etcd cluster stores info about the cluster
 * kube-scheduler responsible for scheduling applications or containers on nodes
 * controllers take care of different functions like node controller, replication controller
 * kube-apiserver responsible for orchestrating all operations within the cluster
 
-Worker node
+### 1.1.2 Worker node
 
 * kubelet - On worker node. Listens for instructions from kube-apiserver and manages containers 
 * kube-proxy - Enables communication between services within the cluster
@@ -565,7 +565,8 @@ Limitations
 * Nodes that exist without a master node, api-server or any controllers.
 * Nodes that have kubelet only.
 * kubelet checks **/etc/kubernetes/manifests** occasionally for pod yaml definition files and creates them
-* Will check files for changes and recreates pods for changes to take effect
+  * Will check files for changes and recreates pods for changes to take effect
+* Static pods have names which the node name is appended to theirs.
 * Limited to pods only, not any other resource
 * Path can be configured with argument when starting kubelet (check with `ps aux | grep kubelet`)
   * **--pod-manifest-path=/path/to/defn/files**
@@ -1069,8 +1070,8 @@ Next upgrade the worker nodes (same steps above)
 
 * First export the environmental variables so you don't need to specify them [[ref](https://stackoverflow.com/questions/52695573/why-do-i-need-to-put-etcdctl-api-3-in-front-of-etcdctl-for-etcdctl-snapshot-save)]
 
-  ```yaml
-  export ETCDCTL_API=3
+  ```bash
+  export ETCDCTL_API=3 # Specifies etcdctl ver 3
   export ETCDCTL_CACERT=/etc/etcd/ca.pem
   export ETCDCTL_CERT=/etc/etcd/kubernetes.pem
   export ETCDCTL_KEY=/etc/etcd/kubernetes-key.pem
@@ -1806,7 +1807,8 @@ Lectures explain Linux namespaces and how you can use it manually to create isol
   * **--cni-conf-dir** (default **/etc/cni/net.d**)
 * Default CNI path is **/opt/cni/bin**
 * Deploy weave to k8s cluster `kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"`
-  * Specify `&env.<options>=setting` to apply. [[Ref](https://www.weave.works/docs/net/latest/kubernetes/kube-addon/#-changing-configuration-options)]
+  * Specify `&env.<options>=setting` to apply if required. [[Ref](https://www.weave.works/docs/net/latest/kubernetes/kube-addon/#-changing-configuration-options)]
+  * Only need to apply the CNI config to master node.
 * Check that the weave pods have been deployed `kubectl get pods -n kube-system`
 
 * Pod IP allocation range can be found by checking logs or config for weave pod or other network plugin
@@ -1894,6 +1896,286 @@ To be filled up
   ```
 
 ## 8.6 Ingress
+
+* Service NodePorts can only allocated high number ports >30k
+
+* Alternative is to use LoadBalancer type instead of NodePort which gives you a DNS name + 80 but works for cloud providers only.
+
+* Ingress works like a k8s load balancer, 
+
+  * Provides DNS domain name (rules for each sub-domain)
+  * SSL cert
+  * Route to different pods via web paths (rules for different paths for each sub-domain)
+
+* Two controllers: GCE and Nginx ingress maintained by k8s project
+
+* Ingress definition file (nginx eg)
+
+  ```yaml
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ingress-controller
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        name: nginx-ingress
+    template:
+      metadata:
+        labels:
+          name: nginx-ingress
+      spec:
+        serviceAccountName: ingress-serviceaccount # Needed for ingress controller to monitor cluster
+        containers:
+          - name: nginx-ingress-controller
+            image: quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.21.0
+            args: # Just like regular nginx arguments
+              - /nginx-ingress-controller
+              - --configmap=$(POD_NAMESPACE)/nginx-configuration
+            env: # Need to specify pod names and namespace in environmental variables (required by nginx pod)
+              - name: POD_NAME
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.name
+              - name: POD_NAMESPACE
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.namespace
+            ports: # Used by nginx controller
+              - name: http
+                containerPort: 80
+              - name: https
+                containerPort: 443
+  ```
+
+  Also specify a CM so you can edit config in future.
+
+  ```yaml
+  kind: ConfigMap
+  apiVersion: v1
+  metadata:
+    name: nginx-configuration
+  ```
+
+* Specify a service to expose the ingress controller to the node
+
+  ```yaml
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: ingress
+  spec:
+    type: NodePort
+    ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: http
+    - port: 443
+      targetPort: 443
+      protocol: TCP
+      name: https
+    selector:
+      name: nginx-ingress
+  ```
+
+* Ingress service needs a service account for permissions to monitor k8s cluster for ingress resources detecting changes
+
+  ```yaml
+  apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: nginx-ingress-serviceaccount
+  ```
+
+### 8.6.1 Ingress Resources
+
+* Used to route users based on hostname or web paths
+
+* This one routes to **wear-service**
+
+  ```yaml
+  apiVersion: extensions/v1beta1
+  kind: Ingress
+  metadata:
+    name: ingress-wear
+  spec:
+    backend:
+      serviceName: wear-service
+      servicePort: 80
+  ```
+
+* This has 1 rule (1 vhost) but two paths
+
+  ```yaml
+  apiVersion: extensions/v1beta1
+  kind: Ingress
+  metadata:
+    name: ingress-wear-watch
+  spec:
+    rules:
+    - http:
+        paths:
+        - path: /wear
+          backend:
+            serviceName: wear-service
+            servicePort: 80
+        - path: /watch
+          backend:
+            serviceName: watch-service
+            servicePort: 80
+  ```
+
+* This has two rules (sub-domains or vhosts) and 1 path each
+
+  ```yaml
+  apiVersion: extensions/v1beta1
+  kind: Ingress
+  metadata:
+    name: ingress-wear-watch
+  spec:
+    rules:
+    - host: wear.my-online-store.com
+      http:
+        paths:
+        - backend:
+            serviceName: wear-service
+            servicePort: 80
+    - host: watch.my-online-store.com
+      http:
+        paths:
+        - backend:
+            serviceName: watch-service
+            servicePort: 80 
+  ```
+
+* To get ingress resources `kubectl get ingress` or `kubectl describe ingress ingress-name`
+
+* Create in imperative way `kubectl create ingress ingress-test --rule="wear.my-online-store.com/wear\*=wear-service:80"`
+
+* To direct to a service in another NS specify it in the ingress definition file
+
+  ```yaml
+  apiVersion: networking.k8s.io/v1
+  kind: Ingress
+  metadata:
+    annotations:
+      nginx.ingress.kubernetes.io/rewrite-target: /
+      nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    name: ingress-wear-watch
+    namespace: another-NS
+  ```
+
+  The NS are distinct so remove any directs to services in other NS.
+
+# 9. Design and Install k8s cluster
+
+* Use kubeadm for on-prem
+* etcd can be put on another node for large clusters to enable HA.
+
+## 9.1 Configure HA
+
+* kubectl should map to kube-apiserver with load balancer to avoid duplication
+
+* Scheduler and controller manager runs active/standby mode because they may duplicate resources if both act at same time
+
+  * kube-controller-manager elected as active with
+
+    ```text
+    kube-controller-manager --leader-elect true
+    						--leader-elect-lease-duration 15s # Non-leader holds lease for 15s
+    						--leader-elect-renew-deadline 10s # Active renews lease every 10s
+    						--leader-elect-retry-period 2s # Both processes try become leader every 2s
+    ```
+
+    First node to update the endpoint becomes leader. 
+
+  * Similar process for scheduler
+
+* etcd can be run outside of master node
+  * kube-apiserver must know where etcd is
+
+* HA will need a LB to talk to two master nodes, two or three etcd nodes.
+
+### 9.1.1 Configure etcd for HA
+
+* For multi-node etcd, one is leader by election RAFT
+
+* When non-leader etcd node receives write request, it ensures copies of the write are distributed to other etcd instances
+
+* To be HA, etcd must be present in at least 3 nodes so you can lose 1 and still maintain quorum
+
+* etcd needs to know where its peers are
+
+  ```text
+  etcd \
+  --initial-cluster peer-1=https://${PEER_1}:2380,peer-2=https://${PEER_2}:2380
+  ```
+
+* Prefer odd over even number of nodes because HA allows one to fail
+
+# 10. Deployment with kubeadm
+
+## 10.1 General steps
+
+1. Install docker, kubadm, kubectl, kubelet on the nodes
+   1. Be sure the versions don't conflict eg. kubelet cannot be higher than kube-apiserver
+2. Initialise master node with `kubeadm init`
+   1. Copy token for worker nodes to join or generate new one with `kubeadm token create`
+3. Join worker nodes to cluster with command
+   1. Nodes reflect as **NotReady** until CNI plugin is installed
+4. Run the `sysctl` command on all nodes 
+5. Apply the CNI plugin on the master node
+
+## 10.2 Notes on setting up kubeadm
+
+Install exact version of kubeadm with `apt install kubeadm=1.21.0-00`
+
+Check with either `dpkg -l` or `apt list kubeadm`
+
+# 11. Troubleshooting
+
+## 11.1 Application failure
+
+Troubleshooting service failure
+
+1. Check whether you can access the web page with `curl`
+2. Check that cluster endpoint of service is correct.
+3. Describe service and the pod/deployment it maps and check if it matches
+4. Check the pod to see if it restarted multiple times
+   1. Check the logs as well including previous logs `--previous`
+
+## 11.2 Control Plane failure
+
+Steps
+
+1. Check nodes are healthy
+2. Check k8s pods on control plane are running or running as services
+3. Check logs of control plane pods
+   1. Use `journalctl -u kube-apiserver` to check logs if not a static pod
+
+## 11.3 Worker Node failure
+
+* Check nodes and describe to see why NotReady
+* **Unknown** means the worker node stopped communicating with master
+* SSH to node and check for CPU, disk space problems as indicated by `describe`
+* Check kubelet service logs on worker nodes 
+* Check certificates are issued by correct CA
+  * Check the dir it's currently configured in
+
+* Note: systemd service files are typically in 
+
+  ```
+  /usr/lib/systemd/system/: units provided by installed packages
+  /etc/systemd/system/: units installed by the system administrator
+  ```
+
+  Or just check service for path
+
+* [Troubleshooting clusters doc](https://kubernetes.io/docs/tasks/debug-application-cluster/debug-cluster/)
+
+* Display info on running endpoints for master node `kubectl cluster-info`
 
 
 
