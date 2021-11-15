@@ -1291,6 +1291,8 @@ Notes:
   * Check pods with `curl https://kube-master:6443/api/v1/pods`
   * The APIs here are /version and /api
 
+* /core and /\<named> groups
+
 * Will get error if you list API groups with `curl https://localhost:6443 -k`, need to specify these arguments for authentication
 
   ```text
@@ -1345,6 +1347,15 @@ Notes:
     resourceNames: ["blue","orange"] # Allows access only to blue, orange pods
   ```
 
+* To check which API groups each resource belongs to, do `kubectl api-resources -o wide | grep resource-type`. Verify with `kubectl explain resource-type` that the Version field has the same API group [[ref](https://stackoverflow.com/questions/57821065/which-api-group-in-k8s)]
+
+  * Eg. for deployments we can see that the apiGroup is **apps** with the allowed verbs
+  
+  ```text
+    root@controlplane:~# k api-resources -o wide | grep -i deployment
+  deployments                       deploy       apps/v1                                true         Deployment                       [create delete deletecollection get list patch update watch]
+  ```
+  
 * Bind a user to the role with a rolebinding definition. Here **dev-user** is bound to **developer** role
 
   ```yaml
@@ -1377,7 +1388,7 @@ Notes:
 
   * `kubectl auth can-i create deployments --as dev-user --namespace ns-1`
 
-* To check which API groups each resource belongs to, do `kubectl api-resources -o wide | grep resource-type`. Verify with `kubectl explain resource-type` that the Version field has the same API group [[ref](https://stackoverflow.com/questions/57821065/which-api-group-in-k8s)]
+* Note: Both the role and rolebindings must specify the same namespace
 
 ## 6.9 Cluster Roles
 

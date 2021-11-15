@@ -41,3 +41,7 @@ Troubleshooting:
 Scheduling:
 
 * [Manually schedule on specific node](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodename)
+
+RBAC:
+
+* [Creating roles](https://kubernetes.io/docs/reference/access-authn-authz/rbac/)
