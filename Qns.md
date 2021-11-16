@@ -35,6 +35,8 @@ Some questions that arise while going through KodeKloud's course. To be updated 
 
 7. What exactly is `--leader-elect` used for in custom scheduler? How do I use it?
 
+   1. The custom scheduler needs to have `--leader-elect=false` before it can be used to schedule pods. If not pods with schedulerName specified gets stuck in Pending.
+
 8. Is there a way to upgrade kubeadm and kubelet on worker nodes without SSH to it from master?
 
 9. Why are there extra steps in the solution demo for `etcdctl snapshot restore` not mentioned in the lecture?
@@ -76,7 +78,7 @@ Some questions that arise while going through KodeKloud's course. To be updated 
 20. Why is the MAC address different for node01 in the lab Explore environment networking namespaces? 
 
     Qn: What is the MAC address assigned to `node01`?
-    
+
     ```text
     root@controlplane:~# k get nodes -o wide
     NAME           STATUS   ROLES                  AGE     VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION   CONTAINER-RUNTIME
@@ -90,7 +92,7 @@ Some questions that arise while going through KodeKloud's course. To be updated 
     Address                  HWtype  HWaddress           Flags Mask            Iface
     10.24.246.5              ether   02:42:0a:18:f6:04   C                     eth0
     ```
-    
+
     The address of the node interface is different. Why are there two?
 
 21. For this question, how do you check it with respect to the service? path for CNI binaries are not specified.
@@ -149,6 +151,16 @@ Some questions that arise while going through KodeKloud's course. To be updated 
 
 25. How do we know where the `--kubeconfig` option for kube-controller-manager is supposed to point to?
 
+# Progress
+
+* Done revision with topics
+  * Application Lifecycle Management
+  * Logging & Monitoring
+  * Scheduling
+  * Core Concepts
+  * Security
+* Currently done with sub-topic Cluster Upgrade Process, doing etcdctl
+
 # Notes
 
 Notes here don't fit into the main notes
@@ -160,6 +172,7 @@ Notes here don't fit into the main notes
    ```bash
    alias k=kubectl
    complete -F __start_kubectl k
+   soure <(kubectl completion bash)
    ```
 
 3. Useful links for further study

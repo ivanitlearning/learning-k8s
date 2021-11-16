@@ -493,7 +493,6 @@ Limitations
 
   * 1 vCPU (can't exceed)
   * 512 Mi (can exceed, but will get terminated eventually)
-  * 
 
 * If your application within the pod requires more than the default resources, you need to set them in the pod definition file.
 
@@ -531,7 +530,7 @@ Limitations
 
 ### 2.8.2 DaemonSet definition
 
-* Similar to ReplicaSet, except for kind.
+* Similar to Deployment, except for kind.
 
   ```yaml
   apiVersion: apps/v1
@@ -627,6 +626,7 @@ Limitations
        - --address:127.0.0.1
        - kubeconfig=/etc/kubernetes/scheduler.conf
        # For HA setup where you have multiple master nodes with k-scheduler process on both of them
+       # Set --leader-elect=false so the custom scheduler can move on to the main loop
        - --leader-elect=true
        # Custom name for scheduler
        - --scheduler-name=my-custom-scheduler
@@ -1048,6 +1048,10 @@ Next upgrade the worker nodes (same steps above)
 4. Install package kubelet with target version on worker node
 5. Exit, go back to master node, check with `kubectl get nodes` that kubelet is upgraded on worker node.
 
+Tips
+
+1. Use `apt-mark showhold` to see which packages are held back from upgrading
+
 ## 5.4 Backup and Restore
 
 * Save all resource config in all namespaces to yaml `kubectl get all --all-namespaces -o yaml`
@@ -1441,7 +1445,7 @@ Notes:
 * Different from user accounts which are used by humans
 
 * Used by applications to authorise access
-  * Prometheus using service account t monitor cluster
+  * Prometheus using service account to monitor cluster
   * Jenkins/Gitlab using service accounts to deploy applications
 
 * Create service account with `kubectl create serviceaccount dashboard-sa`
@@ -1469,6 +1473,7 @@ Notes:
     automountServiceAccountToken: false # Specify this to avoid adopting service account token
   ```
 
+* Usage: Configure a deployment or pod to use a serviceaccount, which in turn has a secret
 
 ## 6.11 Image Security
 
@@ -1521,9 +1526,9 @@ Notes:
 
 ## 6.13 Network Policies
 
-* Similar to NACLs
+* Similar to NACLs, except default is allow all implicit
 
-* Default k8s doesn't block any traffic
+  * Seen in lab
 
 * Created as k8s resource. This one applies 3306 ingress for pod api-pod.
 
@@ -2165,6 +2170,8 @@ Steps
 2. Check k8s pods on control plane are running or running as services
 3. Check logs of control plane pods
    1. Use `journalctl -u kube-apiserver` to check logs if not a static pod
+
+* If `kubectl` can't work, run `docker ps -a | grep Exited` to see which control plane container failed and check its logs
 
 ## 11.3 Worker Node failure
 
