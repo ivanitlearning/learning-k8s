@@ -159,7 +159,11 @@ Some questions that arise while going through KodeKloud's course. To be updated 
   * Scheduling
   * Core Concepts
   * Security
-* Currently done with sub-topic Cluster Upgrade Process, doing etcdctl
+  * Cluster Maintenance
+  * Storage
+  * Networking
+  * Setup cluster with kubeadm
+* Currently doing Networking, done with Deploy Network Solution
 
 # Notes
 

@@ -809,6 +809,72 @@ data:
 
 View/describe configmaps `kubectl get configmaps cfgmap`  and `kubectl describe configmaps cfgmap`
 
+#### 4.3.1.4 Troubleshooting with ConfigMap
+
+Some pods may mount config within volumes with ConfigMap. The following shows kube-proxy using a config file specified at **/var/lib/kube-proxy/configuration.conf** which is on mount path **/var/lib/kube-proxy**
+
+```text
+root@controlplane:~# k -n kube-system describe pods kube-proxy
+Name:                 kube-proxy-44d5s
+Namespace:            kube-system   
+...
+Controlled By:  DaemonSet/kube-proxy
+Containers:                                                                         
+  kube-proxy:
+    Container ID:  docker://78da095b5b318d197cdb427d0962d0cbdebefe85349a724cf54bb78b1dad7b96
+    Image:         k8s.gcr.io/kube-proxy:v1.18.0
+    Image ID:      docker-pullable://k8s.gcr.io/kube-proxy@sha256:9e858386d52d0abaf936c1d10a763648ab7d85c8eb0af08a50a64238146e5571
+    Port:          <none>
+    Host Port:     <none>
+    Command:
+      /usr/local/bin/kube-proxy
+      --config=/var/lib/kube-proxy/configuration.conf
+      --hostname-override=$(NODE_NAME)
+...
+    Mounts:
+      /lib/modules from lib-modules (ro)
+      /run/xtables.lock from xtables-lock (rw)
+      /var/lib/kube-proxy from kube-proxy (rw)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-proxy-token-rxfjp (ro)
+...
+Volumes:
+  kube-proxy:
+    Type:      ConfigMap (a volume populated by a ConfigMap)
+    Name:      kube-proxy
+    Optional:  false
+```
+
+But a check with the ConfigMap shows the config file isn't **configuration.conf** but rather **config.conf**
+
+```text
+root@controlplane:~# k -n kube-system describe cm kube-proxy
+Name:         kube-proxy
+Namespace:    kube-system
+Labels:       app=kube-proxy
+Annotations:  kubeadm.kubernetes.io/component-config.hash: sha256:3c1c57a3d54be93d94daaa656d9428e3fbaf8d0cbb4d2221339c2d450391ee35
+                      
+Data                 
+====               
+config.conf:    
+---- 
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+bindAddress: 0.0.0.0
+bindAddressHardFail: false
+```
+
+So to fix this we can edit the kube-proxy pod to load config from config.conf instead. Since this pod is created by a DaemonSet, we should kubectl edit DaemonSet to correct this. Once fixed, we can verify with kubectl exec that the mount path indeed contains config.conf
+
+```text
+root@controlplane:~# k -n kube-system exec -it kube-proxy-bjzfc -- ls -lah /var/lib/kube-proxy
+total 16K
+drwxrwxrwx 3 root root 4.0K Nov 18 16:43 .
+drwxr-xr-x 1 root root 4.0K Nov 18 16:43 ..
+drwxr-xr-x 2 root root 4.0K Nov 18 16:43 ..2021_11_18_16_43_54.821752807
+lrwxrwxrwx 1 root root   31 Nov 18 16:43 ..data -> ..2021_11_18_16_43_54.821752807
+lrwxrwxrwx 1 root root   18 Nov 18 16:43 config.conf -> ..data/config.conf
+lrwxrwxrwx 1 root root   22 Nov 18 16:43 kubeconfig.conf -> ..data/kubeconfig.conf
+```
+
 ### 4.3.2 Via Secrets
 
 Pod definition referencing secrets
@@ -1114,7 +1180,7 @@ Tips
 * To restore etcd from backup
   1. Stop kube-apiserver service `service kube-apiserver stop` (if k8s controller was manually installed)
   2. Restore snapshot with `etcdctl snapshot restore snapshot.db --data-dir /path/to/new/data/dir/`
-  3. Update the --data-dir by checking the staticPodPath of kubelet then edit the yaml file for kubelet to re-create the etcd pod
+  3. Update the `--data-dir` by checking the staticPodPath of kubelet for etcd.yaml then edit the yaml file for kubelet to re-create the etcd pod
   4. Start the kube-apiserver service `service kube-apiserver start` and restart `service etcd restart` (not required)
 
 # 6. Security
@@ -1617,7 +1683,7 @@ Notes:
 
 * If no volumes, PVC remains pending until PV available
 
-* Note: Access Modes on PVC, PV must match.
+* Note: Access Modes on PVC, PV **must** match.
 
 * Can use labels and selectors to bind to preferred volume if multiple available
 
@@ -1671,7 +1737,7 @@ Notes:
 
 * Dynamic provisioning automatically creates storage on the cloud provider so you only need to create PVC to reference SC directly.
 
-  * PV is automatically created by storage class
+  * PV is automatically created when storage class is created
 
 * For Google cloud, SC definition is
 
@@ -1837,7 +1903,7 @@ To be filled up
 
 * Pods are hosted on nodes, while services are hosted across cluster-wide ie. ClusterIP
 * When service is created, it is assigned IP from a pre-defined range.
-* kube-proxy on each node creates forwarding rule that forwards traffic meant for the service IP to the pod IP via
+* **kube-proxy** on each node creates forwarding rule that forwards traffic meant for the service IP to the pod IP via
   * userspace
   * iptables
   * ipvs
@@ -2195,5 +2261,11 @@ Steps
 
 * Display info on running endpoints for master node `kubectl cluster-info`
 
+## 11.4 Network troubleshooting
 
-
+1. Check whether network plugin is installed if pods can't start
+   1. kubectl apply CNI plugin
+2. kube-proxy troubleshooting
+   1. Check logs
+   2. Check config.conf mounted on configmap is correct
+   3. Check kube-proxy is running in container
