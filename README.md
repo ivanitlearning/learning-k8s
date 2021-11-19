@@ -2269,3 +2269,31 @@ Steps
    1. Check logs
    2. Check config.conf mounted on configmap is correct
    3. Check kube-proxy is running in container
+
+# 12. kubectl JSONPath
+
+* Append `-o jsonp` to kubectl queries to return info in JSON
+
+* Append `-o=jsonpath=` encapsulate in **'{}'**
+
+* Get image name used by pods in cluster
+
+  ```text
+  kubectl get pods -o=jsonpath='{.items[0].spec.containers[0].image}'
+  ```
+
+* Add `{"\n"}` for newline and `{"\t"}`
+
+* Pipe to jq and less with colours
+
+  ```text
+  k get nodes -o=jsonpath='{.items[*].status}' | jq -C . | less -R
+  ```
+
+* Sort by propert
+
+  ```text
+  kubectl get nodes --sort-by=.metadata.name
+  ```
+
+  
