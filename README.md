@@ -301,9 +301,9 @@ Expose a port on a pod with a service `kubectl expose pod redis-pod --port=6379 
 
 * View pods in all namespace with `kubectl get pods --all-namespaces`
 
-### 1.16 Resource Quota
+## 1.16 Resource Quota
 
-* Possible to limit resources for namespaces with a ResourceQuota yaml
+Possible to limit resources for namespaces with a ResourceQuota yaml, but not individual containers in that namespace
 
 ```yaml
 apiVersion: v1
@@ -320,14 +320,32 @@ spec:
     limits.memory: 10Gi
 ```
 
-## 1.17 Imperative vs Declarative
+## 1.17 Limit Ranges
 
-### 1.17.1 Imperative
+Unlike ResourceQuota, these limit the resources used by individual containers in a namespaces. Can also specify minimums instead of maximums. [[ref](https://kubernetes.io/docs/concepts/policy/limit-range/#what-s-next)]
+
+```yaml
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: mem-min-max-demo-lr
+spec:
+  limits:
+  - max:
+      memory: 1Gi
+    min:
+      memory: 500Mi
+    type: Container
+```
+
+## 1.18 Imperative vs Declarative
+
+### 1.18.1 Imperative
 
 * Quicker if you just need to create a resource from scratch
 * Or edit object in place
 
-### 1.17.2 Declarative
+### 1.18.2 Declarative
 
 Can use kubectl to apply a whole group of yaml files `kubectl apply -f /path/to/yaml`
 
