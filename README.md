@@ -91,7 +91,7 @@ Start the nginx container using a different command and custom arguments.
 
 `kubectl run nginx --image=nginx --command -- <cmd> <arg1> ... <argN>`
 
-Exec bash shell into container within pod `kubectl exec -it pod-name --container main-app -- /bin/bash`
+Exec bash shell into container within pod `kubectl exec -it pod-name --container main-app -- ash`
 
 Or just execute command and exit `kubectl exec -it pod-name --container main-app -- cat /var/log/syslog`
 
@@ -789,7 +789,7 @@ APP_MODE: prod
 
 Creating configmap by specifying key-value pairs `kubectl create configmap app-config --from-literal=APP_COLOR=blue --from-literal=APP_MOD=prod`
 
-By specifying files `kubectl create configmap app-config --from-file=app_config.properties`
+By specifying files `kubectl create configmap app-config --from-file=app_config.properties` or use `--from-env-file` to read line by line into env.
 
 #### 4.3.1.2 Declarative
 
@@ -1541,6 +1541,14 @@ Notes:
 
 * Usage: Configure a deployment or pod to use a serviceaccount, which in turn has a secret
 
+* When running `--as` specify the ServiceAccount (eg. **job-inspector**) in the format **system:serviceaccount:namespace:serviceaccount-name**. [[Ref](https://stackoverflow.com/questions/54889458/kubernetes-check-serviceaccount-permissions)]
+
+  ```text
+  kubectl --as=system:serviceaccount:rbac:job-inspector auth can-i get job -n rbac
+  ```
+
+  Also see the docs for rolebinding to see how the serviceaccount [is specified](https://kubernetes.io/docs/reference/access-authn-authz/rbac/)
+
 ## 6.11 Image Security
 
 * To use an image from private repository first login then do a run
@@ -1576,12 +1584,14 @@ Notes:
   ```yaml
   # Pod definition
   spec:
+    securityContext:
+      runAsUser: 1001 # Containers without security context specified run as this
     containers:
     - name: ubuntu
       image: ubuntu
       command: ["sleep", "3600"]
       securityContext:
-        runAsUser: 1000
+        runAsUser: 1000 # Run this container with user UID 1000
         capabilities: 
           add: ["MAC_ADMIN"]
   ```
@@ -2227,6 +2237,14 @@ Troubleshooting service failure
 3. Describe service and the pod/deployment it maps and check if it matches
 4. Check the pod to see if it restarted multiple times
    1. Check the logs as well including previous logs `--previous`
+
+* To check if a service DNS is working create a busybox pod then use wget to try to hit the service
+
+  ```text
+  root@master:~/mofaizal# k -n apps run busybox --image=busybox -it -- ash
+  If you don't see a command prompt, try pressing enter.
+  / # wget -qO- http://super-store-service:8080
+  ```
 
 ## 11.2 Control Plane failure
 

@@ -164,6 +164,15 @@ Some questions that arise while going through KodeKloud's course. To be updated 
   * Networking
   * Setup cluster with kubeadm
 * Currently doing Networking, done with Deploy Network Solution
+* Labs worth doing
+  * [CKA-Study Guide](https://github.com/David-VTUK/CKA-StudyGuide)
+  * [CKA or CKAD certification exams practices sample](https://github.com/mofaizal/cka-and-ckad-certification-exams-practices-samp)
+  * https://kubewiz.com/exams (not free)
+* Exam tips and experiences
+  * https://www.capitalone.com/tech/software-engineering/journey-to-the-center-of-the-cka-exam/
+  * https://brownfield.dev/post/2021-05-13-series-cert-cka/
+  * https://www.reddit.com/r/kubernetes/comments/ks032z/killersh_questions/
+  * https://blog.zhenkai.xyz/how-i-passed-certified-kubernetes-administrator-cka-exam-quick-tips/
 
 # Notes
 
@@ -176,6 +185,7 @@ Notes here don't fit into the main notes
    ```bash
    alias k=kubectl
    complete -F __start_kubectl k
+   export dry="-o yaml --dry-run=client" # Call it with $yml
    soure <(kubectl completion bash)
    ```
 
