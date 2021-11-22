@@ -167,6 +167,7 @@ Some questions that arise while going through KodeKloud's course. To be updated 
 * Labs worth doing
   * [CKA-Study Guide](https://github.com/David-VTUK/CKA-StudyGuide)
   * [CKA or CKAD certification exams practices sample](https://github.com/mofaizal/cka-and-ckad-certification-exams-practices-samp)
+  * [bmuschko's CKA Crash Course](https://github.com/bmuschko/cka-crash-course/)
   * https://kubewiz.com/exams (not free)
 * Exam tips and experiences
   * https://www.capitalone.com/tech/software-engineering/journey-to-the-center-of-the-cka-exam/
@@ -180,26 +181,41 @@ Notes here don't fit into the main notes
 
 1. kube-apiserver is available as a service and binary [only if installed directly](https://stackoverflow.com/questions/51666507/how-can-kube-apiserver-be-restarted?rq=1), otherwise it is provisioned as pod on namespace kube-system by kubeadm
 
-2. You can enable autocomplete with alias k=kubectl [with this](https://kubernetes.io/docs/tasks/tools/included/optional-kubectl-configs-bash-linux/). Add these into **~/.bashrc** and `source ~/.bashrc` in **/etc/profile** if required
+2. You can enable autocomplete with alias k=kubectl [with this](https://kubernetes.io/docs/tasks/tools/included/optional-kubectl-configs-bash-linux/). Add these into **~/.bashrc** and `source ~/.bashrc` in **/etc/profile** if required.
 
    ```bash
    alias k=kubectl
    complete -F __start_kubectl k
-   export dry="-o yaml --dry-run=client" # Call it with $yml
+   export dry="-o yaml --dry-run=client" # Call it with $dry
    soure <(kubectl completion bash)
    ```
 
-3. Useful links for further study
-
-   https://github.com/bmuschko/cka-study-guide
-
-4. To make tmux use bash as a default shell edit ~/.tmux.conf to add (create one if non-existent)
+3. To make tmux use bash as a default shell edit ~/.tmux.conf to add (create one if non-existent)
 
    ```conf
    set-option -g default-shell /bin/bash
    ```
 
-5. Some keys for tmux
+4. Customisation
+
+   ```text
+   # Add source ~/.bashrc to /etc/profile
+   # Add the bash-completion for k into ~/.bashrc
+   # Set TERM=xterm-256color
+   # Check there is set paste in ~/.vimrc
+   # ~/.vimrc
+   set smartcase
+   set ignorecase
+   set paste
+   # In vim, do :colorscheme <space> TAB to select then specify it in ~/.vimrc
+   
+   ```
+
+4. Useful links for further study
+
+   https://github.com/bmuschko/cka-study-guide
+
+6. Some keys for tmux
 
    ```text
    Ctrl-b " # Starts new horizontal pane
@@ -213,15 +229,5 @@ Notes here don't fit into the main notes
    Ctrl-b & # Kill current window
    ```
 
-6. To paste without messing up alignment in vim do `:set paste`
 
-7. Tips for Alpine environment
-
-   ```text
-   # Add source ~/.bashrc to /etc/profile
-   # Add the bash-completion for k into ~/.bashrc
-   # Set TERM=xterm-256color
-   # Check there is set paste in ~/.vimrc
-   ```
-   
 8. Remember to check whether the correct dirs are mounted apart from the arguments specified to the control plane pods

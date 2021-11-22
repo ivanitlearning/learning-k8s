@@ -177,11 +177,11 @@ Rollback with `kubectl rollout undo deployment/myapp-deployment`
 
 Update without modifying YAML with `kubectl set image deployment/myapp-deployment nginx=nginx:1.9.1`
 
-Check status and history of deployment
+Check status and history of deployment, see details with `--revision=rev-no`
 
 ```text
 kubectl rollout status deployment/myapp-deployment
-kubectl rollout history deployment/myapp-deployment
+kubectl rollout history deployment/myapp-deployment --revision=1
 ```
 
 ## 1.10 Services
