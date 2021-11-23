@@ -60,6 +60,8 @@ Some questions that arise while going through KodeKloud's course. To be updated 
 
 15. Learn what are API groups?
 
+    * They're groupings of APIs you can see with `kubectl api-resources`
+
 16. Why are API groups apps and extensions required for creating deployments?
 
 17. How does podselector work for NetworkPolicy when applied to services? 
@@ -148,6 +150,8 @@ Some questions that arise while going through KodeKloud's course. To be updated 
     ```
 
 24. How to configure default-backend-http for ingress?
+
+    * https://kubernetes.io/docs/concepts/services-networking/ingress/#single-service-ingress
 
 25. How do we know where the `--kubeconfig` option for kube-controller-manager is supposed to point to?
 
