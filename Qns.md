@@ -151,6 +151,12 @@ Some questions that arise while going through KodeKloud's course. To be updated 
 
 25. How do we know where the `--kubeconfig` option for kube-controller-manager is supposed to point to?
 
+26. How does the users in kubeconfig relate to the users in CSR?
+
+27. When creating users from .csr files, do we need to use user.key? Or just create and approve CSR from base64 .csr?
+
+    * Is the field "expirationSeconds" not needed in CSR definitions?
+
 # Progress
 
 * Done revision with topics
@@ -231,3 +237,4 @@ Notes here don't fit into the main notes
 
 
 8. Remember to check whether the correct dirs are mounted apart from the arguments specified to the control plane pods
+9. Note down steps in creating users from scratch and granting roles, also clarify CSR links
