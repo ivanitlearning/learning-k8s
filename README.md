@@ -1296,18 +1296,13 @@ Notes:
   * etcd server
   * kubelet server
 
-
-### 6.3.1
-
-
-
 ## 6.4 Certificates API
 
 * CA server is just a pair of key files, typically the master node.
 * Users create CertificateSigningRequest object
   * Admins can review requests and approve them
 
-### Steps
+### Steps to create user
 
 1. User first creates key jane.key and sends it to admin
 
@@ -1315,13 +1310,13 @@ Notes:
    openssl genrsa -out jane.key 2048
    ```
 
-2. Admin takes the key and generates a CSR file
+2. Admin takes the key and generates a CSR file. Note that CN is the user name and O is the group name (if applicable)
 
    ```bash
-   openssl req -new -key jane.key -subj "/CN=jane" -out jane.csr 
+   openssl req -new -key jane.key -subj "/CN=jane/O=admins" -out jane.csr 
    ```
 
-3. Then uses the CSR file to generate CSR resource
+3. Then use the CSR file to generate CSR resource
 
    ```yaml
    apiVersion: certificates.k8s.io/v1beta1
@@ -1341,9 +1336,13 @@ Notes:
 
 4. When generated view all CSRs with `kubectl get csr` and approve with `kubectl certificate approve csr-name`
 
+5. Then create roles and rolebindings
+
 * You can view the certificate with `kubectl get csr csr-name -o yaml`
   * The certificate itself is base64 encoded
 * kube-controller-manager contains the paths of cluster signing cert file and signing key
+* Also see [this answer](https://stackoverflow.com/a/44950136/7908040)
+* This [answer on discuss.kubernetes](https://discuss.kubernetes.io/t/how-to-create-user-in-kubernetes-cluster-and-give-it-access/9101/4) which requires you to create the user public cert as well, then add it to kubectl config
 
 ## 6.5 KubeConfig
 

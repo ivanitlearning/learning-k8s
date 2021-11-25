@@ -35,13 +35,17 @@ Some questions that arise while going through KodeKloud's course. To be updated 
 
 7. What exactly is `--leader-elect` used for in custom scheduler? How do I use it?
 
-   1. The custom scheduler needs to have `--leader-elect=false` before it can be used to schedule pods. If not pods with schedulerName specified gets stuck in Pending.
+   Ans: The custom scheduler needs to have `--leader-elect=false` before it can be used to schedule pods. If not pods with schedulerName specified gets stuck in Pending.
 
 8. Is there a way to upgrade kubeadm and kubelet on worker nodes without SSH to it from master?
+
+   Ans: Nope.
 
 9. Why are there extra steps in the solution demo for `etcdctl snapshot restore` not mentioned in the lecture?
 
 10. The documentation for restoring etcdctl cluster [links to etcd.io](https://kubernetes.io/docs/tasks/administer-cluster/configure-upgrade-etcd/), but this is outside kubernetes.io. Can use for exam?
+
+    Ans: Nope.
 
 11. In the etcdctl restore lab I omitted these arguments and could restore the svc and deploy, but the pod was still stuck in pending even after 10 min. Is this acceptable?
 
@@ -60,7 +64,7 @@ Some questions that arise while going through KodeKloud's course. To be updated 
 
 15. Learn what are API groups?
 
-    * They're groupings of APIs you can see with `kubectl api-resources`
+    Ans: They're groupings of APIs you can see with `kubectl api-resources`
 
 16. Why are API groups apps and extensions required for creating deployments?
 
@@ -76,6 +80,8 @@ Some questions that arise while going through KodeKloud's course. To be updated 
     ```
 
 19. Why is the volumeMount specified together with PVC [in this example](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#claims-as-volumes)?
+
+    Ans: VolumeMount tells the pod where to mount the PVC inside the pod.
 
 20. Why is the MAC address different for node01 in the lab Explore environment networking namespaces? 
 
@@ -136,6 +142,8 @@ Some questions that arise while going through KodeKloud's course. To be updated 
     Events:            <none>
     ```
 
+    Ans: The endpoints directs traffic meant for the service IP to the respective pods. Check that the pods have those IPs and ports exposed.
+
 23. Why do I need to specify annotations in the ingress lab config or it won't work? What are annotations?
 
     ```yaml
@@ -155,11 +163,19 @@ Some questions that arise while going through KodeKloud's course. To be updated 
 
 25. How do we know where the `--kubeconfig` option for kube-controller-manager is supposed to point to?
 
+    Ans: You configure this to read config files where they're stored.s
+
 26. How does the users in kubeconfig relate to the users in CSR?
+
+    Ans: Have to connect the two. [Ans here](https://discuss.kubernetes.io/t/how-to-create-user-in-kubernetes-cluster-and-give-it-access/9101/4).
 
 27. When creating users from .csr files, do we need to use user.key? Or just create and approve CSR from base64 .csr?
 
-    * Is the field "expirationSeconds" not needed in CSR definitions?
+    Ans: See the steps in the guide.
+
+28. Is the field "expirationSeconds" not needed in CSR definitions?
+
+    Ans: Only available for k8s [1.22 onwards](https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/).
 
 # Progress
 
