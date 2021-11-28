@@ -191,10 +191,11 @@ Some questions that arise while going through KodeKloud's course. To be updated 
   * Setup cluster with kubeadm
 * Currently doing Networking, done with Deploy Network Solution
 * Labs worth doing
-  * [CKA-Study Guide](https://github.com/David-VTUK/CKA-StudyGuide)
-  * [CKA or CKAD certification exams practices sample](https://github.com/mofaizal/cka-and-ckad-certification-exams-practices-samp)
+  * [David-VTUK's CKA-Study Guide](https://github.com/David-VTUK/CKA-StudyGuide)
+  * [mofaizal's CKA or CKAD certification exams practices sample](https://github.com/mofaizal/cka-and-ckad-certification-exams-practices-samp)
   * [bmuschko's CKA Crash Course](https://github.com/bmuschko/cka-crash-course/)
   * https://kubewiz.com/exams (not free)
+  * [warolv's CKA series (NetworkPolicy only)](https://github.com/warolv/cka-series)
 * Exam tips and experiences
   * https://www.capitalone.com/tech/software-engineering/journey-to-the-center-of-the-cka-exam/
   * https://brownfield.dev/post/2021-05-13-series-cert-cka/

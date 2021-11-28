@@ -475,7 +475,7 @@ Node affinity types - Considered only during scheduling, ignored during executio
 * `requiredDuringSchedulingIgnoredDuringExecution`
 * `preferredDuringSchedulingIgnoredDuringExecution`
 
-Planned
+Planned but not implemented
 
 - `requiredDuringSchedulingRequiredDuringExecution`
 - `preferredDuringSchedulingRequiredDuringExecution`
@@ -692,6 +692,8 @@ kubectl create -f metric-server/deploy/1.8+/
 kubectl top node
 kubectl top pod
 ```
+
+* killer.sh note, you can run `kubectl top pod -h` to see the switches even if Metrics Server isn't installed.
 
 ## 3.2 Viewing application logs
 
@@ -1342,7 +1344,7 @@ Notes:
   * The certificate itself is base64 encoded
 * kube-controller-manager contains the paths of cluster signing cert file and signing key
 * Also see [this answer](https://stackoverflow.com/a/44950136/7908040)
-* This [answer on discuss.kubernetes](https://discuss.kubernetes.io/t/how-to-create-user-in-kubernetes-cluster-and-give-it-access/9101/4) which requires you to create the user public cert as well, then add it to kubectl config
+* Follow [this step-by-step guide](Creating-user.md) to create a user, assign roles and add to kubeconfig, based on [this answer](https://discuss.kubernetes.io/t/how-to-create-user-in-kubernetes-cluster-and-give-it-access/9101/4).
 
 ## 6.5 KubeConfig
 
@@ -1521,7 +1523,7 @@ Notes:
 
 * To check which request verbs are available for a resource, say persistentvolumes do `kubectl api-resources -o wide | grep persistentvolumes`
 
-  * [Documentation](https://kubernetes.io/docs/reference/access-authn-authz/authorization/#review-your-request-attributes) (not too helpful)
+* [Documentation](https://kubernetes.io/docs/reference/access-authn-authz/authorization/#review-your-request-attributes) (not too helpful)
 
 ## 6.10 Service Account
 
@@ -1532,7 +1534,8 @@ Notes:
   * Jenkins/Gitlab using service accounts to deploy applications
 
 * Create service account with `kubectl create serviceaccount dashboard-sa`
-  * Token is automatically created (view with `describe`) as secret
+  * Token is automatically created (view with `describe`) as k8s Secret
+  * Note: You can disable this automatic Secret creation [with this](https://stackoverflow.com/questions/65393939/how-to-disable-creation-of-token-secret-creation-while-creating-a-service-accoun)
   
 * View service account with `kubectl get serviceaccount`
 
@@ -1621,9 +1624,9 @@ Notes:
 
 * Similar to NACLs, except default is allow all implicit
 
-  * Seen in lab
-
 * Created as k8s resource. This one applies 3306 ingress for pod api-pod.
+
+* If any netpol is applied on a resource, implicit deny is assumed for both ingress or egress unless explicitly specified. So to 
 
   ```yaml
   apiVersion: networking.k8s.io/v1
@@ -1638,7 +1641,7 @@ Notes:
     - Ingress
     ingress:
     - from:
-      - ipBlock: # Works as OR with ns and pod selector if the "-" specified
+      - ipBlock: # Works as OR with ns and pod selector if "-" specified, meaning it adds to the list allowed
           cidr: 172.17.0.0/16 # Can also specify /32 for one IP
           except:
           - 172.17.1.0/24
@@ -1654,6 +1657,34 @@ Notes:
   ```
 
 * Note that policies are stateful (replies to ingress automatically allowed)
+
+* When `{}` is specified it means all, so everything is allowed for that selector, be it namespaces, pods etc.
+
+* To allow DNS you may want to allow egress to port 53 so it can do DNS lookups for service names
+
+  ```yaml
+  apiVersion: networking.k8s.io/v1
+  kind: NetworkPolicy
+  metadata:
+    name: internal-policy
+    namespace: default
+  spec:
+    podSelector:
+      matchLabels:
+        name: internal
+    policyTypes:
+    - Egress
+    - Ingress
+    ingress:
+      - {}
+    egress:
+    - ports: # This allows DNS lookups, otherwise test with pod IPs only.
+      - port: 53
+        protocol: UDP
+      - port: 53
+        protocol: TCP
+  ```
+  
 
 # 7. Storage
 
@@ -1784,6 +1815,8 @@ Notes:
 # 8. Networking
 
 Lectures explain Linux namespaces and how you can use it manually to create isolated regions within a host, and how to connect them together. How docker connects the containers using bridge network and forwards the port to the host using iptables is also explained.
+
+Note that this isn't actually part of the CKA syllabus but I still included it because it looks cool.
 
 ## 8.1 Linux namespaces
 
@@ -2331,4 +2364,70 @@ Steps
   kubectl get nodes --sort-by=.metadata.name
   ```
 
-  
+# Topics not in Mumshad's CKA course
+
+These are not found in Mumshad's course, but probably in the CKAD or CKS.
+
+# 13. Health Probes
+
+* kubelet monitors whether containers are ready. Three types:
+  * `livenessProbe`: Indicates whether the container is running. If the liveness probe fails, the kubelet kills the container, and the container is subjected to its [restart policy](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy). If a Container does not provide a liveness probe, the default state is `Success`.
+  * `readinessProbe`: Indicates whether the container is ready to respond to requests. If the readiness probe fails, the endpoints controller removes the Pod's IP address from the endpoints of all Services that match the Pod. The default state of readiness before the initial delay is `Failure`. If a Container does not provide a readiness probe, the default state is `Success`.
+  * `startupProbe`: Indicates whether the application within the container is started. All other probes are disabled if a startup probe is provided, until it succeeds. If the startup probe fails, the kubelet kills the container, and the container is subjected to its [restart policy](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy). If a Container does not provide a startup probe, the default state is `Success`.
+
+* Startup probes are used for containers that take a long time to start up, where using the liveness probe may indicate false negative results
+* Liveness probes are used if a container needs to be restarted without its running processes getting killed. Configure a health check to a running endpoint within the container for example.
+* Readiness probes can be used to stop traffic from being sent without restarting the container when it fails. Used for maintenance or checks on backend services used by the container, where the running process in the container is still functional.
+
+## 13.1 Fields
+
+Taken from docs
+
+- `initialDelaySeconds`: Number of seconds after the container has started before liveness or readiness probes are initiated. Defaults to 0 seconds. Minimum value is 0.
+- `periodSeconds`: How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.
+- `timeoutSeconds`: Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1.
+- `successThreshold`: Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1. Must be 1 for liveness and startup Probes. Minimum value is 1.
+- `failureThreshold`: When a probe fails, Kubernetes will try `failureThreshold` times before giving up. Giving up in case of liveness probe means restarting the container. In case of readiness probe the Pod will be marked Unready. Defaults to 3. Minimum value is 1.
+
+## 13.2 Examples
+
+Pod definition
+
+```yaml
+spec:
+  containers:
+  - name: liveness
+    image: k8s.gcr.io/busybox
+    args:
+    - /bin/sh
+    - -c
+    - touch /tmp/healthy; sleep 30; rm -rf /tmp/healthy; sleep 600
+    livenessProbe:
+      exec:
+        command:
+        - cat
+        - /tmp/healthy
+      initialDelaySeconds: 5
+      periodSeconds: 5
+```
+
+HTTP checks
+
+```yaml
+spec:
+  containers:
+  - name: liveness
+    image: k8s.gcr.io/liveness
+    args:
+    - /server
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 8080
+        httpHeaders:
+        - name: Custom-Header
+          value: Awesome
+      initialDelaySeconds: 3
+      periodSeconds: 3
+```
+
