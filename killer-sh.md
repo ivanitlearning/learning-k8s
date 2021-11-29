@@ -254,7 +254,8 @@ Finally delete the *Service* and confirm that the iptables rules are gone from a
 
 ___________________
 
-How to find the iptables rules belonging to the service?
+1. How to find the iptables rules belonging to the service?
+2. How to expose port for multi-container pods?
 
 _________
 

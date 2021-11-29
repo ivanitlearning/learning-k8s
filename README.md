@@ -263,6 +263,8 @@ spec:
 
 Expose a port on a pod with a service `kubectl expose pod redis-pod --port=6379 --type=ClusterIP --name=redis-service`
 
+Check that the created service has endpoints `kubectl -n project-hamster get pod,svc,ep`. This can help save time troubleshooting when you spot a service has no endpoints so a pod is not being exposed properly.
+
 ## 1.15 Namespaces
 
 * Within a namespace, you can refer to a service with just its hostname `mysql.connect("db-service")`
@@ -765,6 +767,15 @@ spec:
   command:
   - "sleep"
   - "10"
+```
+
+Note that if you want to write an entire command without breaking each argument into list members we can do
+
+```yaml
+command:
+  - sh
+  - -c
+  - "whatever command you want to run here"
 ```
 
 ## 4.3 Configure environmental variables in apps
@@ -2358,7 +2369,7 @@ Steps
   k get nodes -o=jsonpath='{.items[*].status}' | jq -C . | less -R
   ```
 
-* Sort by propert
+* Sort by property
 
   ```text
   kubectl get nodes --sort-by=.metadata.name
