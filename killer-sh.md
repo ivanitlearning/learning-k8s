@@ -197,6 +197,17 @@ d: exec: "tail -f /vol/log/date.log": stat tail -f /vol/log/date.log: no such fi
       /vol/log from task-pv-storage (rw)
 ```
 
+Almost there. Just note that when you run commands you can do
+
+```yaml
+command:
+  - ash
+  - -c
+  - whatever command and argument to run here.
+```
+
+Don't have to include each parameter in its own array if the entire thing is passed to the shell.
+
 ## EQ 1
 
 Check all available *Pods* in the *Namespace* `project-c13` and find the names of those that would probably be terminated first if the *Nodes* run out of resources (cpu or memory) to schedule all *Pods*. Write the *Pod* names into `/opt/course/e1/pods-not-stable.txt`.
