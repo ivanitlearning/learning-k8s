@@ -275,3 +275,65 @@ The ans for 2 isn't `kubectl top pods`
 # Qns to review
 
 1, 7, 9, 12, 13, 14
+
+# 2nd run- through
+
+Q3
+
+```text
+k8s@terminal:~/Q1$ k -n project-c13 scale sts/o3db --replicas=1 --record=true
+Flag --record has been deprecated, --record will be removed in the future
+statefulset.apps/o3db scaled
+```
+
+What's the non-deprecated ans for this?
+
+Ans: There's no non-deprecated ans for this.
+
+Qn 9
+Check if the ans if to use nodename for pod.yaml instead of static pods
+
+Ans: Yes it does.
+
+Q11
+Does the pod DS itself need the specific labels or just the pods?
+
+Ans: Ans puts labels on the DS and pods.
+
+Q14 
+Is there a better way to get the path of the config file other than guessing cni dir under /etc?
+
+Ans: No, the ans looks for the cni dir under /etc
+
+Q16
+
+Is this how to solve?
+
+```text
+k8s@terminal:~$ k -n project-c14 get roles --no-headers | wc -l
+300
+k8s@terminal:~$ echo "project-c14 300" > /opt/course/16/crowded-namespace.txt	
+```
+
+Ans: Yes
+
+Q20
+
+Why is /var/lib/kubelet non-existent even after installation?
+
+```text
+root@cluster3-worker2:~# ls -lah /var/lib/kubelet
+ls: cannot access '/var/lib/kubelet': No such file or directory
+```
+
+Notes: C3 broken. Finish everything else first then restart session.
+
+Q24
+
+Does the egress policy need include two entries for db1 and db2 pods?
+
+Ans: Yes, if not backend pod will be able to access db2 on port 1111 which is not allowed.
+
+## Redo cluster3
+
+Q19,20,21 - Done

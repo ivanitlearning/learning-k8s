@@ -65,7 +65,7 @@ These commands can be generalised for other resources as well.
 
 Check with `kubectl api-resouces` to see what you can query
 
-`kubectl <command> --record` Makes command appear in history?
+`kubectl <command> --record` Makes command appear in history and visible with `describe` under **Annotations**
 
 `kubectl get all` List all the resources which are provisioned.
 
@@ -1317,44 +1317,7 @@ Notes:
 
 ### Steps to create user
 
-1. User first creates key jane.key and sends it to admin
-
-   ```bash
-   openssl genrsa -out jane.key 2048
-   ```
-
-2. Admin takes the key and generates a CSR file. Note that CN is the user name and O is the group name (if applicable)
-
-   ```bash
-   openssl req -new -key jane.key -subj "/CN=jane/O=admins" -out jane.csr 
-   ```
-
-3. Then use the CSR file to generate CSR resource
-
-   ```yaml
-   apiVersion: certificates.k8s.io/v1beta1
-   kind: CertificateSigningRequest
-   metadata:
-     name: jane
-   spec:
-     groups:
-     - system:authenticated
-     usages:
-     - digital signature
-     - key encipherment
-     - server auth
-     request:
-       {cat jane.csr | base64}
-   ```
-
-4. When generated view all CSRs with `kubectl get csr` and approve with `kubectl certificate approve csr-name`
-
-5. Then create roles and rolebindings
-
-* You can view the certificate with `kubectl get csr csr-name -o yaml`
-  * The certificate itself is base64 encoded
-* kube-controller-manager contains the paths of cluster signing cert file and signing key
-* Also see [this answer](https://stackoverflow.com/a/44950136/7908040)
+* See [this answer](https://stackoverflow.com/a/44950136/7908040)
 * Follow [this step-by-step guide](Creating-user.md) to create a user, assign roles and add to kubeconfig, based on [this answer](https://discuss.kubernetes.io/t/how-to-create-user-in-kubernetes-cluster-and-give-it-access/9101/4).
 
 ## 6.5 KubeConfig
@@ -1721,6 +1684,20 @@ Notes:
         path: /data # directory location on host
         type: Directory # this field is optional
   ```
+
+### 7.1.1 emptyDir
+
+* Created when pod is assigned to node
+* Multiple containers in same pod can write to same dir
+* [Use cases vs hostPath](https://dev.to/techworld_with_nana/difference-between-emptydir-and-hostpath-volume-types-in-kubernetes-286g)
+* In pod definition
+
+```yaml
+spec:
+  volumes:
+  - name: cache-volume
+    emptyDir: {}
+```
 
 ## 7.2 Persistent Volumes
 
@@ -2321,9 +2298,13 @@ Steps
 ## 11.3 Worker Node failure
 
 * Check nodes and describe to see why NotReady
+
 * **Unknown** means the worker node stopped communicating with master
+
 * SSH to node and check for CPU, disk space problems as indicated by `describe`
+
 * Check kubelet service logs on worker nodes 
+
 * Check certificates are issued by correct CA
   * Check the dir it's currently configured in
 
@@ -2338,7 +2319,9 @@ Steps
 
 * [Troubleshooting clusters doc](https://kubernetes.io/docs/tasks/debug-application-cluster/debug-cluster/)
 
-* Display info on running endpoints for master node `kubectl cluster-info`
+* Display info on running endpoints for master node `kubectl cluster-info`, can also specify `--kubeconfig`.
+
+* If you need to you can [reset kubeadm](https://www.ibm.com/docs/en/fci/1.1.0?topic=tk-worker-node-missing-from-kubernetes-cluster-after-node-restart) on a worker node with `kubeadm reset` then run this to generate the token on the master node `kubeadm token create --print-join-command` and use that to join the cluster again.
 
 ## 11.4 Network troubleshooting
 

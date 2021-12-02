@@ -176,6 +176,16 @@ Some questions that arise while going through KodeKloud's course. To be updated 
 28. Is the field "expirationSeconds" not needed in CSR definitions?
 
     Ans: Only available for k8s [1.22 onwards](https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/).
+    
+29. When creating clusterrolebinding for sa, do you specify `system:serviceaccount:ns:sa-name` or `ns:sa-name`? Does it matter if clusterroles are not namespace scoped?
+
+    Ans: Based on [this](https://stackoverflow.com/a/59409212/7908040) and [this](https://travis.media/clusterrolebinding-with-service-account-all-namespaces/) it seems the answer is `ns:sa-name`
+
+30. `containerPort` is [not needed](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/) in Pod definition?
+
+    > List of ports to expose from the container. Exposing a port here gives the system additional information about the network connections a container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that port from being exposed. Any port which is listening on the default "0.0.0.0" address inside a container will be accessible from the network. Cannot be updated.
+
+    Ans: Not needed, tested to work without it.
 
 # Progress
 
@@ -234,8 +244,8 @@ Notes here don't fit into the main notes
    set smartcase
    set ignorecase
    set paste
+   set shiftwidth=2
    # In vim, do :colorscheme <space> TAB to select then specify it in ~/.vimrc
-   
    ```
 
 4. Useful links for further study
@@ -259,3 +269,7 @@ Notes here don't fit into the main notes
 
 8. Remember to check whether the correct dirs are mounted apart from the arguments specified to the control plane pods
 9. Note down steps in creating users from scratch and granting roles, also clarify CSR links
+10. Use `nc` to test if ports are open and accessible for service endpoints
+11. Pod IP ranges are determined by the CNI plugin. Check the CNI pods config and its logs
+12. Service IP ranges are determined by `kube-apiserver`. Check config.
+13. Exposing a pod/deploy is faster than creating a service.
