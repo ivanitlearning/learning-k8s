@@ -224,7 +224,7 @@ Notes here don't fit into the main notes
    alias k=kubectl
    complete -F __start_kubectl k
    export dry="-o yaml --dry-run=client" # Call it with $dry
-   soure <(kubectl completion bash)
+   source <(kubectl completion bash)
    ```
 
 3. To make tmux use bash as a default shell edit ~/.tmux.conf to add (create one if non-existent)
