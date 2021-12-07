@@ -778,6 +778,8 @@ command:
   - "whatever command you want to run here"
 ```
 
+Note its possible to specify `k run webapp-green --image=kodekloud/webapp-color --command=false -- --color=green` where command=false to pass in arguments only, retaining `ENTRYPOINT` in the container Dockerfile.
+
 ## 4.3 Configure environmental variables in apps
 
 Specify env variables in pod definition files
