@@ -87,5 +87,129 @@ spec:
           restartPolicy: Never
 ```
 
-You can manually run a job from a cronjob with `kubectl create job --from=cronjob/<name of cronjob> <name of job>`
+Manually run a job from a cronjob with `kubectl create job --from=cronjob/<name of cronjob> <name of job>`
+
+# 3. Services and Networking
+
+Kodekloud note: Topics here not on exam
+
+## 3.1 Stateful Sets
+
+* Unlike deployments, we can configure master/slave configuration such that master pods come up first then slaves.
+  * Master pod must be running state before the other pods deployed.
+* Pods get names derived from STS name and in sequence eg. mysql-0.
+  * First pod will always be named \<sts-name>-0
+* Pods will be scaled in order; last will be removed first.
+
+Definition
+
+* Create as Deployment then rename Kind to StatefulSet.
+* Provide a **serviceName** in the STS definition.
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  ports:
+  - port: 80
+    name: web
+  clusterIP: None
+  selector:
+    app: nginx
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: web
+spec:
+  selector:
+    matchLabels:
+      app: nginx # has to match .spec.template.metadata.labels
+  serviceName: "nginx"
+...
+```
+
+## 3.2 Headless Services
+
+* This gives a DNS name to pods in the format `podname.headless-svcname.namespace.svc.cluster.domain`
+  * Eg. `mysql-0.mysql-h.default.svc.cluster.local`
+* Headless service have `clusterIP: None` set.
+* Pod definition must have **subdomain** set to name of headless service, and **hostname** field in pod definition.
+* This example sets the subdomain and hostname of a pod (no STS here)
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+  labels:
+    app: mysql
+spec:
+  containers:
+  - name: mysql
+    image: mysql
+  subdomain: mysql-h # This must match name of headless service
+  hostname: mysql-pod # Required to create A record for pod.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-h
+spec:
+  ports:
+  - port: 3306
+  selector:
+    app: mysql
+  clusterIP: None
+```
+
+However, note that as part of a Deployment this means every pod created will the exact same DNS name `mysql-pod.mysql-h.default.svc.cluster.local`
+
+With a StatefulSet, we can omit the **subdomain** and **hostname**
+
+* Note that serviceName must be specified to link back to headless service so it knows what subdomain to assign to pod.
+
+```yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-deployment
+  labels:
+    app: mysql
+spec:
+  serviceName: mysql-h # This MUST match the headless service name
+  replicas: 3
+  matchLabels:
+    app: mysql
+  template:
+    metadata:
+      name: myapp-pod
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-h
+spec:
+  ports:
+  - port: 3306
+  selector:
+    app: mysql
+  clusterIP: None
+```
+
+STS pods have DNS names `mysql-0.mysql-h.default.svc.cluster.local`. Now all pods will have separate DNS created.
+
+# 3. Sep 2021 Changes
+
+Named in Kodekloud for lack of a better term
 
