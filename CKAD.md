@@ -23,5 +23,8 @@ Types of probes
 
 Specify `initialDelaySeconds` to wait before checking probes
 
+Generally readiness probes are meant to test if a pod is ready to start receiving traffic overall. Failed health checks result in pods removed from service endpoints.
+
 ## 1.2 Liveness Probes
 
+Meant to check if pod's internal app is ready. Failed health checks subject the pod to its restart policy.
