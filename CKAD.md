@@ -213,3 +213,34 @@ STS pods have DNS names `mysql-0.mysql-h.default.svc.cluster.local`. Now all pod
 
 Named in Kodekloud for lack of a better term
 
+## 3.1 Define, build Docker images
+
+* If an image layer fails when building, Docker uses a cached copy of the successful image to continue building
+* Build docker image `docker build -f Dockerfile -t name:tag .`
+* Run container from image with `docker run -d -p 8282:8080/tcp name:tag`
+* 
+
+## 3.2 Admission Controllers
+
+* Used to set finer grain rules eg. no images from unauthorised registry, without tags etc.
+
+* Check enabled admission controllers with `k -n kube-system exec kube-apiserver-master -- kube-apiserver -h | grep enable-admission-plugins` if kubeadm is used to set up cluster
+  * Also can check `ps aux | grep kube-apiserver` to see plugins enabled/disabled.
+
+* Enable admission controllers with `kube-apiserver --enable-admission-plugins=NodeRestriction,other-plugin-names`
+  * Edit the kube-apiserver static pod definition file
+* 
+
+View list of [admission controllers here](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#what-does-each-admission-controller-do)
+
+## 3.3 Custom admission controllers
+
+### 3.3.1 Mutating admission controllers
+
+* These change or mutate objects as they are created to add attributes (eg. default storageclass where none specified)
+* Generally invoked before validating admission controllers because mutating ac's may prevent validating ac's from being invoked.
+
+## 3.4 API Deprecations
+
+* Convert the apiVersion with `kubectl convert -f deploy.yaml --output-version apps/v1` with [link here](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/#install-kubectl-convert-plugin)
+* kubectl convert is a plugin to be installed separately.

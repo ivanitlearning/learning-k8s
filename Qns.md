@@ -1,4 +1,4 @@
-# Qns
+# Qns - CKA
 
 Some questions that arise while going through KodeKloud's course. To be updated periodically. These arise mostly from stream of consciousness musing, so don't expect it to be properly structured.
 
@@ -186,6 +186,12 @@ Some questions that arise while going through KodeKloud's course. To be updated 
     > List of ports to expose from the container. Exposing a port here gives the system additional information about the network connections a container uses, but is primarily informational. Not specifying a port here DOES NOT prevent that port from being exposed. Any port which is listening on the default "0.0.0.0" address inside a container will be accessible from the network. Cannot be updated.
 
     Ans: Not needed, tested to work without it.
+
+# Qns - CKAD
+
+1. What to understand about webhook admission controllers?
+
+2. And about API versions, deprecations and migration?
 
 # Progress
 
