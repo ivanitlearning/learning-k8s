@@ -190,8 +190,9 @@ Some questions that arise while going through KodeKloud's course. To be updated 
 # Qns - CKAD
 
 1. What to understand about webhook admission controllers?
-
 2. And about API versions, deprecations and migration?
+3. How do you check preferredVersion of API group? Why must use `kubectl proxy 8001&`?
+4. How to check that API version is enabled?
 
 # Progress
 
@@ -218,7 +219,7 @@ Some questions that arise while going through KodeKloud's course. To be updated 
   * https://www.reddit.com/r/kubernetes/comments/ks032z/killersh_questions/
   * https://blog.zhenkai.xyz/how-i-passed-certified-kubernetes-administrator-cka-exam-quick-tips/
 
-# Notes
+# Notes - CKA
 
 Notes here don't fit into the main notes
 
@@ -279,3 +280,11 @@ Notes here don't fit into the main notes
 11. Pod IP ranges are determined by the CNI plugin. Check the CNI pods config and its logs
 12. Service IP ranges are determined by `kube-apiserver`. Check config.
 13. Exposing a pod/deploy is faster than creating a service.
+
+# Notes - CKAD
+
+1. Exam experiences
+   * https://mengying-li.medium.com/failed-ckad-first-attempt-my-journey-to-improve-exam-score-from-53-to-98-in-a-month-part-1-badde0746231
+2. Labs worth doing
+   * [dgkanatsios](https://github.com/dgkanatsios/CKAD-exercises)
+   * 

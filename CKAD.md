@@ -240,7 +240,61 @@ View list of [admission controllers here](https://kubernetes.io/docs/reference/a
 * These change or mutate objects as they are created to add attributes (eg. default storageclass where none specified)
 * Generally invoked before validating admission controllers because mutating ac's may prevent validating ac's from being invoked.
 
-## 3.4 API Deprecations
+### 3.3.2 Validation admission controllers
+
+* Validates resource creation requests to see if requested resources exist and rejects if not eg. create resource in non-existent namespace
+
+### 3.3.3 Admission webhooks
+
+* When request to create resource is made, MutatingAdmissionWebhook sends AdmissionReview to Admission Webhook server containing object details.
+* Reply is sent to mutate and/or validate the resource request.
+
+* A ValidatingWebhookConfiguration resource is created to determine the rules under which the webhook is called.
+
+```yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration # Can be MutatingWebhookConfiguration also
+metadata:
+  name: pod-policy.example.com
+webhooks:
+- name: pod-policy.example.com
+  rules: # These determine when the admission webhook will be called ie. which resource creation trigger it
+  - apiGroups:   [""] # This example is triggered when pods are created.
+    apiVersions: ["v1"]
+    operations:  ["CREATE"]
+    resources:   ["pods"]
+    scope:       Namespaced
+  clientConfig:
+    service: # This assumes the webhook service is in this NS with this name
+      namespace: webhook-namespace
+      name: webhook-service
+    caBundle: "Ci0tLS0tQk...<`caBundle` is a PEM encoded CA bundle which will be used to validate the webhook's server certificate.>...tLS0K"
+```
+
+## 3.4 API Versions
+
+* API groups like /apps/v1 are stable/GA versions
+* Alternatives are /v1alpha1, /v1beta1
+* Order of versions
+
+|                     | Alpha                     | Beta                    | GA (Stable) |
+| ------------------- | ------------------------- | ----------------------- | ----------- |
+| Version name        | vX**alpha**Y eg. v1alpha1 | vX**beta**Y eg. v1beta1 | vX eg. v1   |
+| Enabled by default? | No                        | Yes                     | Yes         |
+
+* GA/stable versions can be Preferred or Storage. These can differ
+  * Preferred: Version used when retrieving information through API with kube commands
+  * Storage: Version stored in etcd regardless of what is specified in YAML definition
+
+* Check preferredVersion with curl to `master:8001/apis/batch` for example
+* Check storage version with command `etcd get "/registry/deployments/default/blue" --print-value-only`
+* Enable API versions not enabled by default by adding argument `kube-apiserver --runtime-config=batch/v2alpha1`
+
+## 3.5 API Deprecations
 
 * Convert the apiVersion with `kubectl convert -f deploy.yaml --output-version apps/v1` with [link here](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/#install-kubectl-convert-plugin)
 * kubectl convert is a plugin to be installed separately.
+
+* Ref [here](https://kubernetes.io/docs/reference/using-api/deprecation-policy/)
+
+* To check which API version is enabled, do `kubectl proxy -h` to see command to proxy all the k8s API then `curl localhost:8001/apis/api-group` to check which is enabled
