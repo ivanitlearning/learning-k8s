@@ -4,7 +4,7 @@ These are notes taken specifically for CKAD which are not included in the [CKA n
 
 # 1. Observability
 
-## 1.1 Readiness Probes
+## 1.1 Health Probes
 
 Run `kubctl describe pod` and check **Conditions**. These are all either True or False
 
@@ -25,7 +25,68 @@ Specify `initialDelaySeconds` to wait before checking probes
 
 Generally readiness probes are meant to test if a pod is ready to start receiving traffic overall. Failed health checks result in pods removed from service endpoints.
 
-## 1.2 Liveness Probes
+* kubelet monitors whether containers are ready. Three types:
+  * `livenessProbe`: Indicates whether the container is running. If the liveness probe fails, the kubelet kills the container, and the container is subjected to its [restart policy](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy). If a Container does not provide a liveness probe, the default state is `Success`.
+  * `readinessProbe`: Indicates whether the container is ready to respond to requests. If the readiness probe fails, the endpoints controller removes the Pod's IP address from the endpoints of all Services that match the Pod. The default state of readiness before the initial delay is `Failure`. If a Container does not provide a readiness probe, the default state is `Success`.
+  * `startupProbe`: Indicates whether the application within the container is started. All other probes are disabled if a startup probe is provided, until it succeeds. If the startup probe fails, the kubelet kills the container, and the container is subjected to its [restart policy](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy). If a Container does not provide a startup probe, the default state is `Success`.
+
+* Startup probes are used for containers that take a long time to start up, where using the liveness probe may indicate false negative results
+* Liveness probes are used if a container needs to be restarted without its running processes getting killed. Configure a health check to a running endpoint within the container for example.
+* Readiness probes can be used to stop traffic from being sent without restarting the container when it fails. Used for maintenance or checks on backend services used by the container, where the running process in the container is still functional.
+
+## 1.2 Fields
+
+Taken from docs
+
+- `initialDelaySeconds`: Number of seconds after the container has started before liveness or readiness probes are initiated. Defaults to 0 seconds. Minimum value is 0.
+- `periodSeconds`: How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.
+- `timeoutSeconds`: Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1.
+- `successThreshold`: Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1. Must be 1 for liveness and startup Probes. Minimum value is 1.
+- `failureThreshold`: When a probe fails, Kubernetes will try `failureThreshold` times before giving up. Giving up in case of liveness probe means restarting the container. In case of readiness probe the Pod will be marked Unready. Defaults to 3. Minimum value is 1.
+
+## 1.3 Examples
+
+Pod definition
+
+```yaml
+spec:
+  containers:
+  - name: liveness
+    image: k8s.gcr.io/busybox
+    args:
+    - /bin/sh
+    - -c
+    - touch /tmp/healthy; sleep 30; rm -rf /tmp/healthy; sleep 600
+    livenessProbe:
+      exec:
+        command:
+        - cat
+        - /tmp/healthy
+      initialDelaySeconds: 5
+      periodSeconds: 5
+```
+
+HTTP checks
+
+```yaml
+spec:
+  containers:
+  - name: liveness
+    image: k8s.gcr.io/liveness
+    args:
+    - /server
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 8080
+        httpHeaders:
+        - name: Custom-Header
+          value: Awesome
+      initialDelaySeconds: 3
+      periodSeconds: 3
+```
+
+## 1.4 Liveness Probes
 
 Meant to check if pod's internal app is ready. Failed health checks subject the pod to its restart policy.
 
@@ -229,7 +290,6 @@ Named in Kodekloud for lack of a better term
 
 * Enable admission controllers with `kube-apiserver --enable-admission-plugins=NodeRestriction,other-plugin-names`
   * Edit the kube-apiserver static pod definition file
-* 
 
 View list of [admission controllers here](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#what-does-each-admission-controller-do)
 
@@ -283,8 +343,8 @@ webhooks:
 | Enabled by default? | No                        | Yes                     | Yes         |
 
 * GA/stable versions can be Preferred or Storage. These can differ
-  * Preferred: Version used when retrieving information through API with kube commands
-  * Storage: Version stored in etcd regardless of what is specified in YAML definition
+  * **Preferred**: Version used when retrieving information through API with kube commands
+  * **Storage**: Version stored in etcd regardless of what is specified in YAML definition
 
 * Check preferredVersion with curl to `master:8001/apis/batch` for example
 * Check storage version with command `etcd get "/registry/deployments/default/blue" --print-value-only`
@@ -298,3 +358,118 @@ webhooks:
 * Ref [here](https://kubernetes.io/docs/reference/using-api/deprecation-policy/)
 
 * To check which API version is enabled, do `kubectl proxy -h` to see command to proxy all the k8s API then `curl localhost:8001/apis/api-group` to check which is enabled
+
+## 3.6 Custom Resource Definitions
+
+* Custom resources require custom controllers to monitor resource request creation so they can execute the necessary changes
+* Need to define custom resource definition before kubectl can accept resource requests.
+
+For example suppose we want a custom resource FlightTicket
+
+```yaml
+# flight-ticket.yaml
+apiVersion: flights.com/v1
+kind: FlightTicket
+metadata:
+  name: my-flight-ticket
+spec:
+  from: Mumbai
+  to: London
+  number: 2
+```
+
+We first create a custom resource definition (CRD) with CRD definition file
+
+```yaml
+# flight-ticket-custom-definition.yaml
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: flighttickets.flights.com
+spec:
+  scope: Namespaced # Specifies if custom resource is namespaced or not
+  group: flights.com # API group CR belongs to
+  names:
+    kind: FlightTicket # Name of CR
+    singular: flightticket # Specify both singular and plural terms for custom resource
+    plural: flighttickets # Seen in k api-resources output
+    shortnames: # So you can run k get ft
+    - ft 
+  versions:
+  - name: v1 # State current version of CR
+    served: true
+    storage: true # API group storage version
+  schema:
+    openAPIV3Schema:
+      type: object
+      properties:
+        spec:
+          type: object
+            properties:
+              from:
+                type: string
+              to:
+                type: string
+              number:
+                type: integer
+                minimum: 1
+                maximum: 10
+```
+
+Then run `kubectl create -f flight-ticket-custom-definition.yaml`, now you can start creating the custom resource object
+
+## 3.7 Custom Controllers
+
+* Creating CRDs only allows CR resource objects to be created, but nothing happens once created.
+* Start with this [sample custom controller repo](https://github.com/kubernetes/sample-controller)
+
+## 3.8 Operator Framework
+
+* CRDs and custom controllers are created separately, but they can actually be created and deployed together as an operator framework.
+
+  Can create both with `kubectl create -f flight-operator.yaml`
+
+* etcd operator is an example of an operator
+* Operators are available at operatorhub.io, eg [etcd](https://operatorhub.io/operator/etcd)
+
+## 3.9 Deployment Strategy
+
+* **Blue-green**: Replace existing blue deployment by slowly rolling out green but no switch over. When done, switch over to green all at once.
+  * Implementation: Create the green Deployment with a different label, then edit the service selector to point to it instead of blue.
+* **Canary**: Route a small % of traffic to new deployment for testing, then redirect all traffic to new deployment
+  * Implemention: Use two labels, one common to both deployments. Service should select just one label. It'll route just half the traffic to canary deployment. To decrease this, reduce canary replicas to minimal number of pods. Alternatively use Istio.
+
+## 3.10 Helm
+
+* Helm brings together the different resource objects of an application, simplifying deployment which native k8s doesn't do well.
+* k8s doesn't know or relate the various Secrets, Deployments, PVs, PVCs together. These are different objects.
+  * Helm package just needs a yaml file (**values.yaml**) where we can customise things like size of PV, username, passwords etc.
+* Commands:
+  * `helm install wordpress` or `helm uninstall wordpress`
+  * `helm upgrade wordpress`
+  * `helm rollback wordpress`
+
+### 3.10.1 Helm commands
+
+Search for charts on Artifact hub (artifacthub.io) with `helm search hub wordpress`
+
+Add other charts repo with `helm repo add bitnami https://charts.bitnami.com/bitnami`
+
+Search the added repo with `helm search repo wordpress`
+
+List existing repos with `helm repo list`
+
+Install helm charts with `helm install release-name chart-name` eg. `helm install release-2 bitnami/wordpress`
+
+List installed packages `helm list`
+
+Uninstall packages with `helm uninstall my-release`
+
+Download but not install package with `helm pull --untar bitnami/wordpress` to working dir.
+
+Install package with path to dir `helm install release-4 ./wordpress`
+
+
+
+
+

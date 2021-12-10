@@ -193,6 +193,8 @@ Some questions that arise while going through KodeKloud's course. To be updated 
 2. And about API versions, deprecations and migration?
 3. How do you check preferredVersion of API group? Why must use `kubectl proxy 8001&`?
 4. How to check that API version is enabled?
+5. What exactly is release name in helm when we do `helm install release-name chartname`? Can it be anything?
+6. 
 
 # Progress
 
