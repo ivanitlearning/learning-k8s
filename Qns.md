@@ -254,6 +254,7 @@ Notes here don't fit into the main notes
    set ignorecase
    set paste
    set shiftwidth=2
+   set cuc # Turn on when needed
    # In vim, do :colorscheme <space> TAB to select then specify it in ~/.vimrc
    ```
 
@@ -289,4 +290,8 @@ Notes here don't fit into the main notes
    * https://mengying-li.medium.com/failed-ckad-first-attempt-my-journey-to-improve-exam-score-from-53-to-98-in-a-month-part-1-badde0746231
 2. Labs worth doing
    * [dgkanatsios](https://github.com/dgkanatsios/CKAD-exercises)
-   * 
+   * [Liptan Biswas (katacoda)](https://www.katacoda.com/liptanbiswas/courses/ckad-practice-challenges)
+   * [fabito CKAD practice qns (katacoda)](https://www.katacoda.com/fabito/scenarios/ckad) (note k8s version is 1.14, old and doesn't necessarily work)
+   * [kvk (katacoda)](https://www.katacoda.com/kvk) (repetitive security Context and create pod qns, ignore)
+   * [vaidic (katacoda)](https://www.katacoda.com/vaidic/courses/ckad)
+
