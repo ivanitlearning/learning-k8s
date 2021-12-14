@@ -279,14 +279,13 @@ Named in Kodekloud for lack of a better term
 * If an image layer fails when building, Docker uses a cached copy of the successful image to continue building
 * Build docker image `docker build -f Dockerfile -t name:tag .`
 * Run container from image with `docker run -d -p 8282:8080/tcp name:tag`
-* 
 
 ## 3.2 Admission Controllers
 
 * Used to set finer grain rules eg. no images from unauthorised registry, without tags etc.
 
 * Check enabled admission controllers with `k -n kube-system exec kube-apiserver-master -- kube-apiserver -h | grep enable-admission-plugins` if kubeadm is used to set up cluster
-  * Also can check `ps aux | grep kube-apiserver` to see plugins enabled/disabled.
+  * Also can check `ps aux | grep kube-apiserver` on master node to see plugins enabled/disabled.
 
 * Enable admission controllers with `kube-apiserver --enable-admission-plugins=NodeRestriction,other-plugin-names`
   * Edit the kube-apiserver static pod definition file
