@@ -345,7 +345,7 @@ webhooks:
   * **Preferred**: Version used when retrieving information through API with kube commands
   * **Storage**: Version stored in etcd regardless of what is specified in YAML definition
 
-* Check preferredVersion with curl to `master:8001/apis/batch` for example
+* Check preferredVersion with curl to `master:8001/apis/batch` for example, after `kubectl proxy`
 * Check storage version with command `etcd get "/registry/deployments/default/blue" --print-value-only`
 * Enable API versions not enabled by default by adding argument `kube-apiserver --runtime-config=batch/v2alpha1`
 
