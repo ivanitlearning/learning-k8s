@@ -353,10 +353,152 @@ webhooks:
 
 * Convert the apiVersion with `kubectl convert -f deploy.yaml --output-version apps/v1` with [link here](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/#install-kubectl-convert-plugin)
 * kubectl convert is a plugin to be installed separately.
-
 * Ref [here](https://kubernetes.io/docs/reference/using-api/deprecation-policy/)
-
 * To check which API version is enabled, do `kubectl proxy -h` to see command to proxy all the k8s API then `curl localhost:8001/apis/api-group` to check which is enabled
+
+Here's how to check what resources are supported for each version of the API group
+
+```text
+root@controlplane:~# kubectl proxy --api-prefix=/
+Starting to serve on 127.0.0.1:8001
+root@controlplane:~# curl localhost:8001/apis/batch
+{
+  "kind": "APIGroup",
+  "apiVersion": "v1",
+  "name": "batch",
+  "versions": [
+    {
+      "groupVersion": "batch/v1",
+      "version": "v1"
+    },
+    {
+      "groupVersion": "batch/v1beta1",
+      "version": "v1beta1"
+    }
+  ],
+  "preferredVersion": {
+    "groupVersion": "batch/v1",
+    "version": "v1"
+  }
+}
+
+```
+
+Two versions are supported for API group **batch**, let's see what is available under **batch/v1**
+
+```text
+root@controlplane:~# curl localhost:8001/apis/batch/v1
+{
+  "kind": "APIResourceList",
+  "apiVersion": "v1",
+  "groupVersion": "batch/v1",
+  "resources": [
+    {
+      "name": "jobs",
+      "singularName": "",
+      "namespaced": true,
+      "kind": "Job",
+      "verbs": [
+        "create",
+        "delete",
+        "deletecollection",
+        "get",
+        "list",
+        "patch",
+        "update",
+        "watch"
+      ],
+      "categories": [
+        "all"
+      ],
+      "storageVersionHash": "mudhfqk/qZY="
+    },
+    {
+      "name": "jobs/status",
+      "singularName": "",
+      "namespaced": true,
+      "kind": "Job",
+      "verbs": [
+        "get",
+        "patch",
+        "update"
+      ]
+    }
+  ]
+}
+```
+
+Just jobs are available. What about **batch/v1beta1**?
+
+```text
+root@controlplane:~# curl localhost:8001/apis/batch/v1beta1
+{
+  "kind": "APIResourceList",
+  "apiVersion": "v1",
+  "groupVersion": "batch/v1beta1",
+  "resources": [
+    {
+      "name": "cronjobs",
+      "singularName": "",
+      "namespaced": true,
+      "kind": "CronJob",
+      "verbs": [
+        "create",
+        "delete",
+        "deletecollection",
+        "get",
+        "list",
+        "patch",
+        "update",
+        "watch"
+      ],
+      "shortNames": [
+        "cj"
+      ],
+      "categories": [
+        "all"
+      ],
+      "storageVersionHash": "h/JlFAZkyyY="
+    },
+    {
+      "name": "cronjobs/status",
+      "singularName": "",
+      "namespaced": true,
+      "kind": "CronJob",
+      "verbs": [
+        "create",
+        "delete",
+        "deletecollection",
+        "get",
+        "list",
+        "patch",
+        "update",
+        "watch"
+      ],
+      "shortNames": [
+        "cj"
+      ],
+      "categories": [
+        "all"
+      ],
+      "storageVersionHash": "h/JlFAZkyyY="
+    },
+    {
+      "name": "cronjobs/status",
+      "singularName": "",
+      "namespaced": true,
+      "kind": "CronJob",
+      "verbs": [
+        "get",
+        "patch",
+        "update"
+      ]
+    }
+  ]
+}
+```
+
+Here we see cronjobs as well.
 
 ## 3.6 Custom Resource Definitions
 

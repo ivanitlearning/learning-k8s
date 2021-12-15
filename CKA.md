@@ -1703,7 +1703,7 @@ Notes:
 
 ### 7.1.1 emptyDir
 
-* Created when pod is assigned to node
+* Created when pod is assigned to node, lasts for same lifespan as pod. Doesn't persist.
 * Multiple containers in same pod can write to same dir
 * [Use cases vs hostPath](https://dev.to/techworld_with_nana/difference-between-emptydir-and-hostpath-volume-types-in-kubernetes-286g)
 * In pod definition
