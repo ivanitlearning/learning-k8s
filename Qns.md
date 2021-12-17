@@ -293,5 +293,5 @@ Notes here don't fit into the main notes
    * [Liptan Biswas (katacoda)](https://www.katacoda.com/liptanbiswas/courses/ckad-practice-challenges)
    * [fabito CKAD practice qns (katacoda)](https://www.katacoda.com/fabito/scenarios/ckad) (note k8s version is 1.14, old and doesn't necessarily work)
    * [kvk (katacoda)](https://www.katacoda.com/kvk) (repetitive security Context and create pod qns, ignore)
-   * [vaidic (katacoda)](https://www.katacoda.com/vaidic/courses/ckad)
+   * [vaidic (katacoda)](https://www.katacoda.com/vaidic/courses/ckad) (404)
 
