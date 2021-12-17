@@ -793,7 +793,25 @@ command:
   - "whatever command you want to run here"
 ```
 
-Note its possible to specify `k run webapp-green --image=kodekloud/webapp-color --command=false -- --color=green` where command=false to pass in arguments only, retaining `ENTRYPOINT` in the container Dockerfile.
+* We can specify `k run webapp-green --image=kodekloud/webapp-color --command=false -- --color=green` where command=false to pass in arguments only, retaining `ENTRYPOINT` in the container Dockerfile.
+
+* To run troublesome commands with `kubectl exec`, especially when it contains single and/or double quotes, put the command in env variable (on the host)
+
+```text
+root@master-node:~# awk_cmd="awk -F : '{print \$1}' /etc/passwd"
+root@master-node:~# echo $awk_cmd
+awk -F : '{print $1}' /etc/passwd
+root@master-node:~# k exec two -c two -- ash -c "$awk_cmd"
+root
+daemon
+bin
+sys
+sync
+mail
+www-data
+operator
+nobody
+```
 
 ## 4.3 Configure environmental variables in apps
 
@@ -1676,6 +1694,8 @@ Notes:
         protocol: TCP
   ```
 
+Note: The Flannel CNI plugin doesn't support [network policies](https://github.com/flannel-io/flannel/issues/558). Use alternatives like Weave and Calico.
+
 # 7. Storage
 
 ## 7.1 Volumes
@@ -1736,6 +1756,7 @@ spec:
      path: /tmp/data
   ```
 
+* You can actually multiple Access Modes on a PV. See [here](https://stackoverflow.com/questions/60248790/why-can-you-set-multiple-accessmodes-on-a-persistent-volume) for explanation.
 
 ## 7.3 Persistent Volume Claims
 
