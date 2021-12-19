@@ -2236,6 +2236,39 @@ To be filled up
 
   The NS are distinct so remove any directs to services in other NS.
 
+* Note you can test if an Ingress redirection to a web host works with either `curl` or `wget`
+
+  ```text
+  root@controlplane:~/Q4# curl localhost:30093/video -H "Host: watch.ecom-store.com"
+  <!doctype html>
+  <title>Hello from Flask</title>
+  <body style="background: #30336b;">
+  
+  <div style="color: #e4e4e4;
+      text-align:  center;
+      height: 90px;
+      vertical-align:  middle;">
+      <img src="https://res.cloudinary.com/cloudusthad/image/upload/v1547052431/video.jpg">
+  
+  </div>
+  
+  </body>
+  root@controlplane:~/Q4# wget -qO- localhost:30093/video --header="Host: watch.ecom-store.com"
+  <!doctype html>
+  <title>Hello from Flask</title>
+  <body style="background: #30336b;">
+  
+  <div style="color: #e4e4e4;
+      text-align:  center;
+      height: 90px;
+      vertical-align:  middle;">
+      <img src="https://res.cloudinary.com/cloudusthad/image/upload/v1547052431/video.jpg">
+  
+  </div>
+  
+  </body>
+  ```
+
 # 9. Design and Install k8s cluster
 
 * Use kubeadm for on-prem

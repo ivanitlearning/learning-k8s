@@ -2,6 +2,8 @@
 
 These contain spoilers from killer.sh. Don't read this unless you want to spoil yourself.
 
+# CKA
+
 ## Q1
 
 You have access to multiple clusters from your main terminal through `kubectl` contexts. Write all those context names into `/opt/course/1/contexts`.
@@ -337,3 +339,72 @@ Ans: Yes, if not backend pod will be able to access db2 on port 1111 which is no
 ## Redo cluster3
 
 Q19,20,21 - Done
+
+# CKAD
+
+## Q2
+
+Your manager would like to run a command manually on occasion to output the status of that exact *Pod*. Please write a command that does this into `/opt/course/2/pod1-status-command.sh`. The command should use `kubectl`.
+
+Can use `awk` here?
+
+## Q4
+
+4. There seems to be a broken release, stuck in `pending-upgrade` state. Find it and delete it
+
+I don't see it?
+
+```text
+k8s@terminal:~/Q4$ helm -n mercury list -o yaml
+- app_version: 2.4.49
+  chart: apache-8.6.5
+  name: internal-issue-report-apache
+  namespace: mercury
+  revision: "1"
+  status: deployed
+  updated: 2021-12-18 07:49:57.769708159 +0000 UTC
+- app_version: 1.21.3
+  chart: nginx-9.5.4
+  name: internal-issue-report-apiv2
+  namespace: mercury
+  revision: "2"
+  status: deployed
+  updated: 2021-12-18 07:45:27.890130721 +0000 UTC
+- app_version: 1.21.1
+  chart: nginx-9.5.0
+  name: internal-issue-report-app
+  namespace: mercury
+  revision: "1"
+  status: deployed
+  updated: 2021-09-16 12:11:41.417558951 +0000 UTC
+k8s@terminal:~/Q4$ helm -n mercury list
+NAME                            NAMESPACE       REVISION        UPDATED                                 STATUS          CHART           APP VERSION
+internal-issue-report-apache    mercury         1               2021-12-18 07:49:57.769708159 +0000 UTC deployed        apache-8.6.5    2.4.49     
+internal-issue-report-apiv2     mercury         2               2021-12-18 07:45:27.890130721 +0000 UTC deployed        nginx-9.5.4     1.21.3     
+internal-issue-report-app       mercury         1               2021-09-16 12:11:41.417558951 +0000 UTC deployed        nginx-9.5.0     1.21.1
+```
+
+## Q8 
+
+There is an existing *Deployment* named `api-new-c32` in *Namespace* `neptune`. A developer did make an update to the *Deployment* but the updated version never came online. Check the *Deployment* history and find a revision that works, then rollback to it. Could you tell Team Neptune what the error was so it doesn't happen again?
+
+I rolled it to the revision with the highest image version number. Is that correct?
+
+## Q11
+
+2. Build the image using Docker, named `registry.killer.sh:5000/sun-cipher`, tagged as `latest` and `v1-docker`, push these to the registry
+
+Possible to have multiple tags?
+
+Skipped 3,4,5, requiring use of Podman?
+
+3. Build the image using Podman, named `registry.killer.sh:5000/sun-cipher`, tagged as `v1-podman`, push it to the registry
+4. Run a container using Podman, which keeps running in the background, named `sun-cipher` using image `registry.killer.sh:5000/sun-cipher:v1-podman`. Run the container from `k8s@terminal` and not `root@terminal`
+5. Write the logs your container `sun-cipher` produced into `/opt/course/11/logs`. Then write a list of all running Podman containers into `/opt/course/11/containers`
+
+## Scoring
+
+Initial: 99/112
+
+After doing everything once, past 2 hrs: 102/112
+

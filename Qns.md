@@ -254,6 +254,8 @@ Notes here don't fit into the main notes
    set ignorecase
    set paste
    set shiftwidth=2
+   set expandtab
+   set tabstop=2
    set cuc # Turn on when needed
    # In vim, do :colorscheme <space> TAB to select then specify it in ~/.vimrc
    ```

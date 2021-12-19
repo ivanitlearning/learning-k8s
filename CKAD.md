@@ -602,7 +602,7 @@ List existing repos with `helm repo list`
 
 Install helm charts with `helm install release-name chart-name` eg. `helm install release-2 bitnami/wordpress`
 
-List installed packages `helm list`
+List installed packages `helm list` (include `-a` switch to see broken releases)
 
 Uninstall packages with `helm uninstall my-release`
 
