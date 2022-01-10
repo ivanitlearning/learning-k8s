@@ -1977,8 +1977,18 @@ Note that this isn't actually part of the CKA syllabus but I still included it b
   * Specify `&env.<options>=setting` to apply if required. [[Ref](https://www.weave.works/docs/net/latest/kubernetes/kube-addon/#-changing-configuration-options)]
   * Only need to apply the CNI config to master node.
 * Check that the weave pods have been deployed `kubectl get pods -n kube-system`
-
 * Pod IP allocation range can be found by checking logs or config for weave pod or other network plugin
+
+Note from testing:
+
+* When migrating from one CNI plugin to another eg. flannel to weave, do these steps
+
+1. Install weave plugin
+2. `kubectl delete -f flannel.yaml`
+3. Remove the CNI config files for flannel in /etc/cni/net.d/10-flannel.conflist
+4. Restart kubelet
+5. Do steps 3-4 for **all nodes**
+6. Delete the `cni0` and `flannel.1` eth interfaces.
 
 ## 8.3 IP address management weave
 
