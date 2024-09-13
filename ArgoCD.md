@@ -32,3 +32,8 @@ Health - Health checks for k8s resources
 ### Install and config
 
 - Possible to use `argocd` binary to login to remote ArgoCD server
+
+### ArgoCD application
+
+- Connecting to a git repository adds a k8s secret to the argocd namespace where it's installed with metadata (link to repo) of the git repo to be deployed
+- 
