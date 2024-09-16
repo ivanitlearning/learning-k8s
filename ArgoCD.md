@@ -36,4 +36,34 @@ Health - Health checks for k8s resources
 ### ArgoCD application
 
 - Connecting to a git repository adds a k8s secret to the argocd namespace where it's installed with metadata (link to repo) of the git repo to be deployed
-- 
+
+CLI:
+
+Deploy via CLI
+
+```text
+argocd app create helm-guestbook --repo https://github.com/argoproj/argocd-example-apps.git --path helm-guestbook --dest-server https://kubernetes.default.svc --dest-namespace default
+```
+
+Sync with CLI: `argocd app sync solar-system-app-2`
+
+### Reconciliation Loop
+
+- Default timeout period is 3 min; ArgoCD will check git repo for changes this often (ie. polling frequency)
+- Can also use git webhook to trigger ArgoCD checks
+- Edit ConfigMap `argocd-cm` to update the time to check eg. `60s`
+  ```text
+  data:
+    timeout.reconciliation: 60s
+  ```
+
+### Application Health
+
+ArgoCD can check if various k8s resource types are healthy
+
+- Service - Check that it has hostname or has status for ingress
+- Inress - Has hostname or IP
+- Deployment, StatefulSet, Daemonset - Replicas match desired
+- PVC - Status.phase is Bound
+
+Possible to write custom health check in Lua, and defined in ConfigMap `argocd-cm`. It can be used to monitor configmaps for undesirable values.
