@@ -66,4 +66,13 @@ ArgoCD can check if various k8s resource types are healthy
 - Deployment, StatefulSet, Daemonset - Replicas match desired
 - PVC - Status.phase is Bound
 
-Possible to write custom health check in Lua, and defined in ConfigMap `argocd-cm`. It can be used to monitor configmaps for undesirable values.
+Possible to write [custom health check in Lua](https://argo-cd.readthedocs.io/en/stable/operator-manual/health/#way-1-define-a-custom-health-check-in-argocd-cm-configmap), and defined in ConfigMap `argocd-cm`. It can be used to monitor configmaps for undesirable values.
+
+### Sync strategies
+
+- Manual or automatic sync applies changes due to changes in Git
+- **Auto-prune** decides what happens when files are deleted from Git. Disabled means nothing is deleted.
+- **Self-heal** restores k8s resources back to Git state when `kubectl` edits are made to cluster
+
+### ArgoCD Applications
+
