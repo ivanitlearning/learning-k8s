@@ -62,8 +62,8 @@ Sync with CLI: `argocd app sync solar-system-app-2`
 ArgoCD can check if various k8s resource types are healthy
 
 - Service - Check that it has hostname or has status for ingress
-- Inress - Has hostname or IP
-- Deployment, StatefulSet, Daemonset - Replicas match desired
+- Ingress - Has hostname or IP
+- Deployment, StatefulSet, DaemonSet - Replicas match desired
 - PVC - Status.phase is Bound
 
 Possible to write [custom health check in Lua](https://argo-cd.readthedocs.io/en/stable/operator-manual/health/#way-1-define-a-custom-health-check-in-argocd-cm-configmap), and defined in ConfigMap `argocd-cm`. It can be used to monitor configmaps for undesirable values.
@@ -76,3 +76,13 @@ Possible to write [custom health check in Lua](https://argo-cd.readthedocs.io/en
 
 ### ArgoCD Applications
 
+### Multiple clusters
+
+- ArgoCD stores cluster info in k8s secrets
+
+### ArgoCD RBAC
+
+- RBAC policies in CM `argocd-rbac-cm`
+- CLI commands to test rbac perms
+  - `argocd account can-i create clusters '*'`
+- ArgoCD supports local users via `argocd-cm`.
